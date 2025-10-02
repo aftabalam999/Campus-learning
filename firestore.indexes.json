@@ -1,33 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "daily_goals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "student_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "created_at",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "topics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "phase_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "order",
-          "order": "ASCENDING"
-        }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }
