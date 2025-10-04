@@ -40,8 +40,10 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
     try {
       setLoading(true);
       const allMentors = await MentorshipService.getAllMentorsWithCapacity();
+      // Filter out the current student (can't be their own mentor)
+      const filteredMentors = allMentors.filter(m => m.mentor.id !== currentStudentId);
       // Sort by available slots (descending)
-      const sorted = allMentors.sort((a, b) => b.available_slots - a.available_slots);
+      const sorted = filteredMentors.sort((a, b) => b.available_slots - a.available_slots);
       setMentors(sorted);
     } catch (err) {
       console.error('Error loading mentors:', err);
@@ -159,6 +161,11 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                           </h3>
                           {mentorInfo.mentor.isSuperMentor && (
                             <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                          )}
+                          {mentorInfo.mentor.isMentor && (
+                            <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                              Mentor
+                            </span>
                           )}
                           {isCurrentMentor && (
                             <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
