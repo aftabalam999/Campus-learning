@@ -42,6 +42,7 @@ const MentorMenteeReview: React.FC = () => {
   // Feedback form state
   const [feedbackForm, setFeedbackForm] = useState({
     mentorNotes: '',
+    goalComment: '',
     assessment: '' as '' | 'needs_improvement' | 'on_track' | 'exceeds_expectations',
     goalStatus: '' as '' | 'approved' | 'reviewed',
     reflectionStatus: '' as '' | 'approved' | 'reviewed'
@@ -102,8 +103,10 @@ const MentorMenteeReview: React.FC = () => {
 
   const openFeedbackPanel = (item: ReviewItem) => {
     setSelectedItem(item);
+    setShowFeedbackPanel(true);
     setFeedbackForm({
       mentorNotes: item.reflection?.mentor_notes || '',
+      goalComment: item.goal.mentor_comment || '',
       assessment: item.reflection?.mentor_assessment || '',
       goalStatus: item.goal.status === 'pending' ? '' : item.goal.status,
       reflectionStatus: item.reflection ? (item.reflection.status === 'pending' ? '' : item.reflection.status) : ''
@@ -116,6 +119,7 @@ const MentorMenteeReview: React.FC = () => {
     setSelectedItem(null);
     setFeedbackForm({
       mentorNotes: '',
+      goalComment: '',
       assessment: '',
       goalStatus: '',
       reflectionStatus: ''
@@ -133,7 +137,8 @@ const MentorMenteeReview: React.FC = () => {
         await GoalService.reviewGoal(
           selectedItem.goal.id,
           userData.id,
-          feedbackForm.goalStatus
+          feedbackForm.goalStatus,
+          feedbackForm.goalComment
         );
       }
 
@@ -623,6 +628,25 @@ const MentorMenteeReview: React.FC = () => {
                       </div>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Goal Comment (visible for both approved and reviewed goals) */}
+              {(feedbackForm.goalStatus === 'approved' || feedbackForm.goalStatus === 'reviewed') && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Goal Comment <span className="text-gray-400 text-xs font-normal">(Optional)</span>
+                  </label>
+                  <textarea
+                    value={feedbackForm.goalComment}
+                    onChange={(e) => setFeedbackForm({ ...feedbackForm, goalComment: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Add a comment about this goal (e.g., suggestions, encouragement, guidance)..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This comment will be visible to the student alongside their goal
+                  </p>
                 </div>
               )}
 

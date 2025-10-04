@@ -8,7 +8,10 @@ import {
   Attendance,
   MentorNote,
   LeaveRequest,
-  StudentProgress
+  StudentProgress,
+  MentorChangeRequest,
+  MentorWithCapacity,
+  User
 } from '../types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -169,12 +172,14 @@ export class GoalService extends FirestoreService {
   static async reviewGoal(
     id: string,
     reviewerId: string,
-    status: 'approved' | 'reviewed'
+    status: 'approved' | 'reviewed',
+    mentorComment?: string
   ): Promise<void> {
     return this.updateGoal(id, {
       status,
       reviewed_by: reviewerId,
-      reviewed_at: new Date()
+      reviewed_at: new Date(),
+      ...(mentorComment ? { mentor_comment: mentorComment } : {})
     });
   }
 }
@@ -546,6 +551,307 @@ export class AdminService extends FirestoreService {
     } catch (error) {
       console.error('Error getting suggested mentors:', error);
       return this.getPotentialMentors();
+    }
+  }
+}
+
+// Mentorship Service
+export class MentorshipService extends FirestoreService {
+  private static MENTOR_REQUESTS_COLLECTION = 'mentor_requests';
+
+  /**
+   * Get mentor capacity information
+   */
+  static async getMentorCapacity(mentorId: string): Promise<MentorWithCapacity | null> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      const mentor = await UserService.getUserById(mentorId);
+      if (!mentor || !mentor.isMentor) return null;
+
+      // Get all students assigned to this mentor
+      const mentees = await UserService.getStudentsByMentor(mentorId);
+      
+      // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
+      const maxMentees = mentor.isSuperMentor 
+        ? 999 
+        : (mentor.max_mentees || 2);
+      
+      const currentMentees = mentees.length;
+      const availableSlots = mentor.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
+
+      return {
+        mentor,
+        current_mentees: currentMentees,
+        max_mentees: maxMentees,
+        available_slots: availableSlots,
+        mentee_names: mentees.map(m => m.name)
+      };
+    } catch (error) {
+      console.error('Error getting mentor capacity:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all mentors with capacity information
+   */
+  static async getAllMentorsWithCapacity(): Promise<MentorWithCapacity[]> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      // Get all users
+      const allUsers = await UserService['getAll']<User>('users');
+      const mentors = allUsers.filter((user: User) => user.isMentor);
+
+      // Get capacity for each mentor
+      const mentorsWithCapacity: MentorWithCapacity[] = [];
+      
+      for (const mentor of mentors) {
+        const capacity = await this.getMentorCapacity(mentor.id);
+        if (capacity) {
+          mentorsWithCapacity.push(capacity);
+        }
+      }
+
+      return mentorsWithCapacity;
+    } catch (error) {
+      console.error('Error getting mentors with capacity:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get available mentors (with open slots)
+   */
+  static async getAvailableMentors(): Promise<MentorWithCapacity[]> {
+    const allMentors = await this.getAllMentorsWithCapacity();
+    return allMentors.filter(m => m.available_slots > 0);
+  }
+
+  /**
+   * Request a mentor change
+   */
+  static async requestMentorChange(
+    studentId: string,
+    requestedMentorId: string,
+    currentMentorId?: string,
+    reason?: string
+  ): Promise<string> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      // Get student and mentor info for denormalization
+      const student = await UserService.getUserById(studentId);
+      const requestedMentor = await UserService.getUserById(requestedMentorId);
+      const currentMentor = currentMentorId ? await UserService.getUserById(currentMentorId) : null;
+
+      if (!student || !requestedMentor) {
+        throw new Error('Student or requested mentor not found');
+      }
+
+      const requestData: Omit<MentorChangeRequest, 'id'> = {
+        student_id: studentId,
+        student_name: student.name,
+        student_email: student.email,
+        requested_mentor_id: requestedMentorId,
+        requested_mentor_name: requestedMentor.name,
+        current_mentor_id: currentMentorId,
+        current_mentor_name: currentMentor?.name,
+        status: 'pending',
+        reason: reason,
+        created_at: new Date()
+      };
+
+      const requestId = await this.create<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestData
+      );
+
+      // Update student's pending_mentor_id
+      await UserService.updateUser(studentId, {
+        pending_mentor_id: requestedMentorId
+      });
+
+      return requestId;
+    } catch (error) {
+      console.error('Error requesting mentor change:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending mentor change requests
+   */
+  static async getPendingMentorRequests(): Promise<MentorChangeRequest[]> {
+    try {
+      return await this.getWhere<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        'status',
+        '==',
+        'pending'
+      );
+    } catch (error) {
+      console.error('Error getting pending requests:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get mentor change requests for a specific student
+   */
+  static async getStudentMentorRequests(studentId: string): Promise<MentorChangeRequest[]> {
+    try {
+      return await this.getWhere<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        'student_id',
+        '==',
+        studentId
+      );
+    } catch (error) {
+      console.error('Error getting student requests:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Approve a mentor change request
+   */
+  static async approveMentorRequest(
+    requestId: string,
+    adminId: string,
+    adminNotes?: string
+  ): Promise<void> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      // Get the request
+      const request = await this.getById<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestId
+      );
+
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      if (request.status !== 'pending') {
+        throw new Error('Request is not pending');
+      }
+
+      // Check mentor capacity
+      const mentorCapacity = await this.getMentorCapacity(request.requested_mentor_id);
+      if (!mentorCapacity || mentorCapacity.available_slots <= 0) {
+        throw new Error('Mentor has no available slots');
+      }
+
+      // Update the request
+      await this.update<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestId,
+        {
+          status: 'approved',
+          reviewed_at: new Date(),
+          reviewed_by: adminId,
+          admin_notes: adminNotes
+        }
+      );
+
+      // Update student's mentor assignment
+      await UserService.updateUser(request.student_id, {
+        mentor_id: request.requested_mentor_id,
+        pending_mentor_id: undefined
+      });
+
+    } catch (error) {
+      console.error('Error approving mentor request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject a mentor change request
+   */
+  static async rejectMentorRequest(
+    requestId: string,
+    adminId: string,
+    adminNotes?: string
+  ): Promise<void> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      // Get the request
+      const request = await this.getById<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestId
+      );
+
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      if (request.status !== 'pending') {
+        throw new Error('Request is not pending');
+      }
+
+      // Update the request
+      await this.update<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestId,
+        {
+          status: 'rejected',
+          reviewed_at: new Date(),
+          reviewed_by: adminId,
+          admin_notes: adminNotes
+        }
+      );
+
+      // Clear student's pending_mentor_id
+      await UserService.updateUser(request.student_id, {
+        pending_mentor_id: undefined
+      });
+
+    } catch (error) {
+      console.error('Error rejecting mentor request:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a pending mentor change request (student-initiated)
+   */
+  static async cancelMentorRequest(requestId: string, studentId: string): Promise<void> {
+    try {
+      const { UserService } = await import('./firestore');
+      
+      const request = await this.getById<MentorChangeRequest>(
+        this.MENTOR_REQUESTS_COLLECTION,
+        requestId
+      );
+
+      if (!request) {
+        throw new Error('Request not found');
+      }
+
+      if (request.student_id !== studentId) {
+        throw new Error('Unauthorized');
+      }
+
+      if (request.status !== 'pending') {
+        throw new Error('Only pending requests can be cancelled');
+      }
+
+      // Delete the request
+      await this.delete(this.MENTOR_REQUESTS_COLLECTION, requestId);
+
+      // Clear student's pending_mentor_id
+      await UserService.updateUser(studentId, {
+        pending_mentor_id: undefined
+      });
+
+    } catch (error) {
+      console.error('Error cancelling mentor request:', error);
+      throw error;
     }
   }
 }

@@ -5,7 +5,10 @@ export interface User {
   email: string;
   isAdmin?: boolean;    // Only used for admin-specific features
   isMentor?: boolean;   // Whether the user is a mentor
+  isSuperMentor?: boolean;  // Can have unlimited mentees (no 2-mentee limit)
   mentor_id?: string;   // ID of assigned mentor if student
+  pending_mentor_id?: string;  // Requested mentor awaiting admin approval
+  max_mentees?: number;  // Override default limit (default: 2, super mentors: unlimited)
   skills?: string[];
   house?: 'Bageshree' | 'Malhar' | 'Bhairav';  // User's assigned house
   campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura';  // User's campus
@@ -48,6 +51,7 @@ export interface DailyGoal {
   goal_text: string;
   target_percentage: number;
   status: 'pending' | 'reviewed' | 'approved';
+  mentor_comment?: string;
   created_at: Date;
   reviewed_at?: Date;
   reviewed_by?: string;
@@ -264,4 +268,31 @@ export interface MenteeOverview {
   average_achievement: number;
   current_phase?: string;
   current_topic?: string;
+}
+
+// Mentor change request interface
+export interface MentorChangeRequest {
+  id: string;
+  student_id: string;
+  student_name?: string; // Denormalized for easy display
+  student_email?: string;
+  requested_mentor_id: string;
+  requested_mentor_name?: string; // Denormalized for easy display
+  current_mentor_id?: string; // Can be null if no current mentor
+  current_mentor_name?: string; // Denormalized for easy display
+  status: 'pending' | 'approved' | 'rejected';
+  reason?: string; // Optional reason from student
+  admin_notes?: string; // Optional notes from admin
+  created_at: Date;
+  reviewed_at?: Date;
+  reviewed_by?: string; // Admin user ID who reviewed
+}
+
+// Helper type for mentor capacity display
+export interface MentorWithCapacity {
+  mentor: User;
+  current_mentees: number;
+  max_mentees: number;
+  available_slots: number;
+  mentee_names: string[];
 }

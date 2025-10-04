@@ -120,9 +120,10 @@ const MentorAssignment: React.FC = () => {
   };
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = searchTerm === '' || 
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const name = (student.name || '').toLowerCase();
+    const email = (student.email || '').toLowerCase();
+    const matchesSearch = searchTerm === '' || name.includes(q) || email.includes(q);
 
     let matchesType = true;
     if (filterType === 'with_mentor') matchesType = !!student.mentor_id;
@@ -136,6 +137,19 @@ const MentorAssignment: React.FC = () => {
     withMentor: students.filter(s => s.mentor_id).length,
     withoutMentor: students.filter(s => !s.mentor_id).length
   };
+
+  // Precompute filtered mentors and a no-results flag to keep JSX simple
+  const mentorQuery = mentorSearchTerm.toLowerCase();
+  const filteredMentors = suggestedMentors.filter(mentor => {
+    const name = (mentor.name || '').toLowerCase();
+    const email = (mentor.email || '').toLowerCase();
+    const phaseName = (mentor.currentPhaseName || '').toLowerCase();
+    const matches = mentorSearchTerm === '' ? true : (
+      name.includes(mentorQuery) || email.includes(mentorQuery) || phaseName.includes(mentorQuery)
+    );
+    return matches && (!selectedHouse || mentor.house === selectedHouse);
+  });
+  const noMentors = filteredMentors.length === 0;
 
   if (loading) {
     return (
@@ -336,12 +350,7 @@ const MentorAssignment: React.FC = () => {
               <div className="p-8 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               </div>
-            ) : suggestedMentors.length === 0 || 
-              (mentorSearchTerm && !suggestedMentors.some(mentor => 
-                mentor.name.toLowerCase().includes(mentorSearchTerm.toLowerCase()) ||
-                mentor.email.toLowerCase().includes(mentorSearchTerm.toLowerCase()) ||
-                mentor.currentPhaseName.toLowerCase().includes(mentorSearchTerm.toLowerCase())
-              )) ? (
+            ) : noMentors ? (
               <div className="p-8 text-center text-gray-500">
                 <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p>
@@ -352,14 +361,7 @@ const MentorAssignment: React.FC = () => {
                 </p>
               </div>
             ) : (
-              suggestedMentors
-                .filter(mentor => 
-                  (mentor.name.toLowerCase().includes(mentorSearchTerm.toLowerCase()) ||
-                   mentor.email.toLowerCase().includes(mentorSearchTerm.toLowerCase()) ||
-                   mentor.currentPhaseName.toLowerCase().includes(mentorSearchTerm.toLowerCase())) &&
-                  (!selectedHouse || mentor.house === selectedHouse)
-                )
-                .map((mentor) => (
+              filteredMentors.map((mentor) => (
                 <div key={mentor.id} className="p-4 hover:bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

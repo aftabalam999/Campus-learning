@@ -59,10 +59,12 @@ const MentorDashboard: React.FC = () => {
           const latestReflection = reflections.length > 0 ? reflections[0] : undefined;
 
           // Calculate average achievement
-          const reflectionsWithAchievement = reflections.filter(r => r.achieved_percentage);
+          const reflectionsWithAchievement = reflections.filter(
+            r => r.achieved_percentage !== undefined && r.achieved_percentage !== null
+          );
           const avgAchievement = reflectionsWithAchievement.length > 0
             ? Math.round(
-                reflectionsWithAchievement.reduce((sum, r) => sum + r.achieved_percentage, 0) / 
+                reflectionsWithAchievement.reduce((sum, r) => sum + (r.achieved_percentage || 0), 0) /
                 reflectionsWithAchievement.length
               )
             : 0;
@@ -74,26 +76,26 @@ const MentorDashboard: React.FC = () => {
             latest_goal: latestGoal,
             latest_reflection: latestReflection,
             average_achievement: avgAchievement,
-            current_phase: latestGoal?.phase_id || undefined,
-            current_topic: latestGoal?.topic_id || undefined
+            current_phase: latestGoal?.phase_id,
+            current_topic: latestGoal?.topic_id
           };
         })
       );
 
-      // Get pair programming requests
-      const pairRequests = await PairProgrammingService.getRequestsByMentor(userData.id);
-      const pendingPairs = pairRequests.filter(r => r.status === 'pending').length;
-
       setMenteeOverviews(overviews);
       setTotalPendingGoals(pendingGoalsCount);
       setTotalPendingReflections(pendingReflectionsCount);
-      setTotalPendingPairRequests(pendingPairs);
+
+      // Get pair programming requests count
+      const pairRequests = await PairProgrammingService.getRequestsByMentor(userData.id);
+      setTotalPendingPairRequests(pairRequests.filter(r => r.status === 'pending').length);
+
     } catch (error) {
       console.error('Error loading mentor data:', error);
     } finally {
       setLoading(false);
     }
-  }, [userData]);
+  }, [userData, navigate]);
 
   useEffect(() => {
     if (userData?.id) {
@@ -106,7 +108,7 @@ const MentorDashboard: React.FC = () => {
   };
 
   const getAchievementColor = (score: number) => {
-    if (score >= 85) return 'text-green-600 bg-green-50';
+    if (score >= 90) return 'text-green-600 bg-green-50';
     if (score >= 70) return 'text-blue-600 bg-blue-50';
     if (score >= 50) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';

@@ -3,6 +3,8 @@ import { DataSeedingService } from '../../services/dataSeedingService';
 import AdminUserManagement from './AdminUserManagement';
 import MentorAssignment from './MentorAssignment';
 import CurriculumAdminPanel from './CurriculumAdminPanel';
+import SuperMentorManagement from './SuperMentorManagement';
+import MentorRequestApproval from './MentorRequestApproval';
 import { 
   Database, 
   RefreshCw, 
@@ -11,10 +13,12 @@ import {
   Users,
   UserCheck,
   BarChart3,
-  Settings
+  Settings,
+  Star,
+  UserPlus
 } from 'lucide-react';
 
-type TabType = 'overview' | 'users' | 'mentors' | 'reports' | 'curriculum';
+type TabType = 'overview' | 'users' | 'mentors' | 'super-mentors' | 'mentor-requests' | 'reports' | 'curriculum';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -66,6 +70,8 @@ const AdminDashboard: React.FC = () => {
     { id: 'overview' as TabType, label: 'Overview', icon: Database },
     { id: 'users' as TabType, label: 'User Management', icon: Users },
     { id: 'mentors' as TabType, label: 'Mentor Assignment', icon: UserCheck },
+    { id: 'super-mentors' as TabType, label: 'Super Mentors', icon: Star },
+    { id: 'mentor-requests' as TabType, label: 'Mentor Requests', icon: UserPlus },
     { id: 'reports' as TabType, label: 'Reports', icon: BarChart3 },
     { id: 'curriculum' as TabType, label: 'Curriculum', icon: Database },
   ];
@@ -262,6 +268,18 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'mentors' && (
             <div className="p-6">
               <MentorAssignment />
+            </div>
+          )}
+
+          {activeTab === 'super-mentors' && (
+            <div className="p-6">
+              <SuperMentorManagement />
+            </div>
+          )}
+
+          {activeTab === 'mentor-requests' && (
+            <div className="p-6">
+              <MentorRequestApproval />
             </div>
           )}
 
