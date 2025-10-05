@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Navigation from './Navigation';
 
 interface LayoutProps {
@@ -6,14 +6,9 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-      <Navigation 
-        isMobileMenuOpen={isMobileMenuOpen} 
-        setIsMobileMenuOpen={setIsMobileMenuOpen} 
-      />
+      <Navigation />
       
       {/* Main content - with padding for top nav (desktop) and bottom nav (mobile) */}
       <main className="pb-20 md:pb-6 pt-16 md:pt-0">

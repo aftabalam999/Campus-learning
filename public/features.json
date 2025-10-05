@@ -1,8 +1,27 @@
 {
-  "generatedAt": "2025-10-05T03:38:15.145Z",
+  "generatedAt": "2025-10-05T04:55:21.142Z",
   "version": "0.1.0",
   "features": {
     "all": [
+      {
+        "id": "feature-1a45b370",
+        "title": "WIP - Smart Mentor Matching Algorithm",
+        "description": "WIP - Smart Mentor Matching Algorithm",
+        "status": "released",
+        "dateAdded": "2025-10-05",
+        "commitHash": "1a45b3709541c5828d357235552ab7da4573e04a",
+        "author": "Mubin"
+      },
+      {
+        "id": "feature-c55ee7a3",
+        "title": "Advanced Analytics Dashboard",
+        "description": "Advanced Analytics Dashboard",
+        "status": "coming-soon",
+        "dateAdded": "2025-10-05",
+        "commitHash": "c55ee7a3daed59d96b73ba0bd9f5ed4154eedb01",
+        "author": "Mubin",
+        "estimatedRelease": "2025-10-19"
+      },
       {
         "id": "feature-03ac25a7",
         "title": "Implement complete mentorship system with Phase 1 & 2",
@@ -15,6 +34,15 @@
     ],
     "released": [
       {
+        "id": "feature-1a45b370",
+        "title": "WIP - Smart Mentor Matching Algorithm",
+        "description": "WIP - Smart Mentor Matching Algorithm",
+        "status": "released",
+        "dateAdded": "2025-10-05",
+        "commitHash": "1a45b3709541c5828d357235552ab7da4573e04a",
+        "author": "Mubin"
+      },
+      {
         "id": "feature-03ac25a7",
         "title": "Implement complete mentorship system with Phase 1 & 2",
         "description": "Implement complete mentorship system with Phase 1 & 2",
@@ -24,7 +52,18 @@
         "author": "Mubin"
       }
     ],
-    "comingSoon": [],
+    "comingSoon": [
+      {
+        "id": "feature-c55ee7a3",
+        "title": "Advanced Analytics Dashboard",
+        "description": "Advanced Analytics Dashboard",
+        "status": "coming-soon",
+        "dateAdded": "2025-10-05",
+        "commitHash": "c55ee7a3daed59d96b73ba0bd9f5ed4154eedb01",
+        "author": "Mubin",
+        "estimatedRelease": "2025-10-19"
+      }
+    ],
     "inDevelopment": [],
     "planned": []
   },

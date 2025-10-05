@@ -36,7 +36,7 @@ interface NavItem {
 }
 
 export default function Navigation() {
-  const { user, userData, login, logout } = useAuth();
+  const { currentUser, userData, setUserData, signInWithGoogle, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
