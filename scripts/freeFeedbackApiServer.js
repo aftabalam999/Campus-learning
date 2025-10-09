@@ -12,7 +12,7 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL || "llama2"; // or "mistral", "codellama", etc.
 
 app.post("/api/smart-feedback", async (req, res) => {
-    const { goalText, context } = req.body;
+    const { goalText, userId, context } = req.body;
 
     if (!goalText) {
         return res.status(400).json({ error: "Missing goalText" });
@@ -137,4 +137,5 @@ app.listen(PORT, () => {
     console.log(`Using Ollama at: ${OLLAMA_BASE_URL}`);
     console.log(`Default model: ${DEFAULT_MODEL}`);
     console.log(`Health check: http://localhost:${PORT}/api/health`);
-});
+});</content>
+<parameter name="filePath">/Users/mubinmac/Documents/Codespace/Campus Learning Dashboard/scripts/freeFeedbackApiServer.js
