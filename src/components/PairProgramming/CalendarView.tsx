@@ -4,7 +4,11 @@ import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import { EnhancedPairProgrammingService } from '../../services/dataServices';
 import { useAuth } from '../../contexts/AuthContext';
 
-const CalendarView: React.FC = () => {
+interface CalendarViewProps {
+  onEventClick?: (event: CalendarEvent) => void;
+}
+
+const CalendarView: React.FC<CalendarViewProps> = ({ onEventClick }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -17,8 +21,9 @@ const CalendarView: React.FC = () => {
       try {
         setLoading(true);
         // Fetch sessions and convert to calendar events
-        const sessions = await EnhancedPairProgrammingService.getSessionsByUser(userData.id);
-        const calendarEvents: CalendarEvent[] = sessions.map(session => ({
+        const sessionsData = await EnhancedPairProgrammingService.getSessionsByUser(userData.id);
+        
+        const calendarEvents: CalendarEvent[] = sessionsData.map(session => ({
           id: session.id,
           type: 'pair_session' as const,
           title: `Pair Programming: ${session.topic}`,
@@ -213,7 +218,10 @@ const CalendarView: React.FC = () => {
                   {dayEvents.slice(0, 2).map((event, eventIndex) => (
                     <div
                       key={eventIndex}
-                      className={`text-xs p-1 rounded border ${getEventColor(event.type)} ${getPriorityColor(event.priority)} truncate`}
+                      onClick={() => {
+                        onEventClick?.(event);
+                      }}
+                      className={`text-xs p-1 rounded border ${getEventColor(event.type)} ${getPriorityColor(event.priority)} truncate cursor-pointer hover:opacity-80 transition-opacity`}
                       title={event.title}
                     >
                       {event.title}
@@ -245,7 +253,11 @@ const CalendarView: React.FC = () => {
               .sort((a, b) => new Date(a.start_date!).getTime() - new Date(b.start_date!).getTime())
               .slice(0, 5)
               .map((event, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div 
+                  key={index} 
+                  onClick={() => onEventClick?.(event)}
+                  className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                >
                   <div className={`flex-shrink-0 w-3 h-3 rounded-full mt-1.5 ${
                     event.type === 'pair_session' ? 'bg-blue-500' :
                     event.type === 'leave' ? 'bg-red-500' :

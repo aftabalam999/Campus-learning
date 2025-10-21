@@ -6,7 +6,8 @@ import {
   PairProgrammingSession,
   DashboardData,
   UserRole,
-  RolePermissions
+  RolePermissions,
+  CalendarEvent
 } from '../../types';
 import { Plus, Calendar, Users, TrendingUp, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import PairProgrammingRequestModal from './PairProgrammingRequestModal';
@@ -40,6 +41,21 @@ const PairProgrammingDashboard: React.FC = () => {
   const requestModal = useModal(showRequestModal, () => setShowRequestModal(false));
   const sessionModal = useModal(showSessionModal, () => setShowSessionModal(false));
   const feedbackModal = useModal(showFeedbackModal, () => setShowFeedbackModal(false));
+
+  // Handle calendar event clicks
+  const handleCalendarEventClick = (event: CalendarEvent) => {
+    // Find the corresponding session in dashboardData
+    if (dashboardData && event.session_id) {
+      const session = dashboardData.upcoming_sessions.find(s => s.id === event.session_id) ||
+                      dashboardData.todays_sessions.find(s => s.id === event.session_id) ||
+                      dashboardData.recent_completed.find(s => s.id === event.session_id);
+      
+      if (session) {
+        setSelectedSession(session);
+        setShowSessionModal(true);
+      }
+    }
+  };
 
   // Determine user role and permissions
   useEffect(() => {
@@ -413,7 +429,7 @@ const PairProgrammingDashboard: React.FC = () => {
         )}
 
         {activeTab === 'calendar' && (
-          <CalendarView />
+          <CalendarView onEventClick={handleCalendarEventClick} />
         )}
 
         {activeTab === 'leaderboard' && (
