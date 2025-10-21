@@ -533,13 +533,16 @@ const MentorMenteeReview: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <button
-                      onClick={() => openFeedbackPanel(item)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="text-sm font-medium">Review & Feedback</span>
-                    </button>
+                    {/* Show button only if goal OR reflection is not approved */}
+                    {!(item.goal.status === 'approved' && (!item.reflection || item.reflection.status === 'approved')) && (
+                      <button
+                        onClick={() => openFeedbackPanel(item)}
+                        className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="text-sm font-medium">Review & Feedback</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
