@@ -15,6 +15,7 @@ import AdminJourneyTracking from './AdminJourneyTracking';
 import AttendanceDashboard from './AttendanceDashboard';
 import MenteeReviewCategoriesAdmin from './MenteeReviewCategoriesAdmin';
 import CampusScheduleAdmin from './CampusScheduleAdmin';
+import HouseStatsAdmin from './HouseStatsAdmin';
 
 
 const AdminDashboard: React.FC = () => {
@@ -55,6 +56,7 @@ const AdminDashboard: React.FC = () => {
       { id: 'phase-timeline', label: 'Phase Timeline' },
       { id: 'attendance', label: 'Attendance Dashboard' },
       { id: 'campus-schedules', label: 'Campus Schedules' },
+      { id: 'house-stats', label: 'House Statistics' },
     ],
     backend: [
       { id: 'curriculum', label: 'Curriculum' },
@@ -325,6 +327,11 @@ const AdminDashboard: React.FC = () => {
         {mainTab === 'reports' && subTab === 'campus-schedules' && (
           <div className="p-6">
             <CampusScheduleAdmin />
+          </div>
+        )}
+        {mainTab === 'reports' && subTab === 'house-stats' && (
+          <div className="p-6">
+            <HouseStatsAdmin />
           </div>
         )}
         {mainTab === 'backend' && subTab === 'bug-reports' && userData?.role !== 'academic_associate' && (

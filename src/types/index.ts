@@ -187,6 +187,21 @@ export interface StudentProgress {
   is_on_track: boolean;
 }
 
+// House statistics cache interface
+export interface HouseStats {
+  id: string;
+  house: 'Bageshree' | 'Malhar' | 'Bhairav';
+  phaseId: string;
+  phaseLabel: string;
+  averageDays: number;
+  studentCount: number;
+  calculatedAt: Date;
+  weekNumber: number;
+  year: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // Dashboard stats interfaces
 export interface StudentStats {
   total_goals: number;

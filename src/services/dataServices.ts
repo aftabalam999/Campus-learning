@@ -1,6 +1,7 @@
 import { FirestoreService, COLLECTIONS, UserService } from './firestore';
 import { PairProgrammingScheduler } from './pairProgrammingScheduler';
 import { RollingQueueService } from './rollingQueueService';
+import { queryCache, CACHE_TTL } from '../utils/cache';
 import {
   Phase,
   Topic,
@@ -38,11 +39,19 @@ export class PhaseService extends FirestoreService {
 
   static async getAllPhases(): Promise<Phase[]> {
     try {
-      // Get all phases without ordering (since data is small)
-      const phases = await this.getAll<Phase>(COLLECTIONS.PHASES);
+      const { queryCache, CACHE_TTL } = await import('../utils/cache');
+      
+      return await queryCache.get(
+        'all-phases',
+        async () => {
+          // Get all phases without ordering (since data is small)
+          const phases = await this.getAll<Phase>(COLLECTIONS.PHASES);
 
-      // Sort by order client-side
-      return phases.sort((a, b) => a.order - b.order);
+          // Sort by order client-side
+          return phases.sort((a, b) => a.order - b.order);
+        },
+        CACHE_TTL.LONG // Cache for 15 minutes - phases change rarely
+      );
     } catch (error) {
       console.error('Error fetching all phases:', error);
       throw error;
@@ -90,11 +99,19 @@ export class TopicService extends FirestoreService {
 
   static async getTopicsByPhase(phaseId: string): Promise<Topic[]> {
     try {
-      // Get all topics for the phase (uses single-field index on phase_id)
-      const topics = await this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId);
+      const { queryCache, CACHE_TTL } = await import('../utils/cache');
+      
+      return await queryCache.get(
+        `topics-phase-${phaseId}`,
+        async () => {
+          // Get all topics for the phase (uses single-field index on phase_id)
+          const topics = await this.getWhere<Topic>(COLLECTIONS.TOPICS, 'phase_id', '==', phaseId);
 
-      // Sort by order client-side
-      return topics.sort((a, b) => a.order - b.order);
+          // Sort by order client-side
+          return topics.sort((a, b) => a.order - b.order);
+        },
+        CACHE_TTL.LONG // Cache for 15 minutes - topics change rarely
+      );
     } catch (error) {
       console.error('Error fetching topics by phase:', error);
       throw error;
@@ -748,7 +765,15 @@ export class AdminService extends FirestoreService {
   // Get all users with optional filtering
   static async getAllUsers(): Promise<any[]> {
     try {
-      return await this.getAll<any>(COLLECTIONS.USERS, 'created_at', 'desc');
+      const { queryCache, CACHE_TTL } = await import('../utils/cache');
+      
+      return await queryCache.get(
+        'all-users',
+        async () => {
+          return await this.getAll<any>(COLLECTIONS.USERS, 'created_at', 'desc');
+        },
+        CACHE_TTL.MEDIUM // Cache for 5 minutes
+      );
     } catch (error) {
       console.error('Error fetching all users:', error);
       throw error;
@@ -758,10 +783,15 @@ export class AdminService extends FirestoreService {
   // Update user admin status
   static async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
     try {
-      return await this.update<any>(COLLECTIONS.USERS, userId, { 
+      await this.update<any>(COLLECTIONS.USERS, userId, { 
         isAdmin,
         updated_at: new Date()
       });
+      
+      // Invalidate user caches
+      const { queryCache } = await import('../utils/cache');
+      queryCache.invalidate('all-users');
+      queryCache.invalidate('all-mentors-with-capacity');
     } catch (error) {
       console.error('Error updating user admin status:', error);
       throw error;
@@ -836,6 +866,11 @@ export class AdminService extends FirestoreService {
           updated_at: new Date()
         });
       }
+      
+      // Invalidate mentor caches
+      const { queryCache } = await import('../utils/cache');
+      queryCache.invalidate('all-users');
+      queryCache.invalidate('all-mentors-with-capacity');
     } catch (error) {
       console.error('Error assigning mentor:', error);
       throw error;
@@ -1006,44 +1041,52 @@ export class MentorshipService extends FirestoreService {
   static async getAllMentorsWithCapacity(): Promise<MentorWithCapacity[]> {
     try {
       console.log('🔍 MentorshipService: Loading all mentors with capacity...');
+      const { queryCache, CACHE_TTL } = await import('../utils/cache');
       const { UserService } = await import('./firestore');
       
-      // Get all users (anyone can be a mentor)
-      console.log('📋 MentorshipService: Fetching all users...');
-      const allUsers = await UserService['getAll']<User>('users');
-      console.log(`✅ MentorshipService: Found ${allUsers.length} users`);
+      // Use cache to avoid repeated expensive queries
+      return await queryCache.get(
+        'all-mentors-with-capacity',
+        async () => {
+          // Get all users (anyone can be a mentor)
+          console.log('📋 MentorshipService: Fetching all users...');
+          const allUsers = await UserService['getAll']<User>('users');
+          console.log(`✅ MentorshipService: Found ${allUsers.length} users`);
 
-      // Get capacity for each user
-      const mentorsWithCapacity: MentorWithCapacity[] = [];
-      
-      for (const user of allUsers) {
-        try {
-          // All users are considered as mentors
-          // Get all students assigned to this user as mentor
-          const mentees = await UserService.getStudentsByMentor(user.id);
+          // Get capacity for each user
+          const mentorsWithCapacity: MentorWithCapacity[] = [];
           
-          // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
-          const maxMentees = user.isSuperMentor 
-            ? 999 
-            : (user.max_mentees || 2);
-          const currentMentees = mentees.length;
-          const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
-          
-          mentorsWithCapacity.push({
-            mentor: user,
-            current_mentees: currentMentees,
-            max_mentees: maxMentees,
-            available_slots: availableSlots,
-            mentee_names: mentees.map(m => m.name)
-          });
-        } catch (userError) {
-          console.warn(`⚠️ MentorshipService: Error processing user ${user.id}:`, userError);
-          // Continue processing other users even if one fails
-        }
-      }
+          for (const user of allUsers) {
+            try {
+              // All users are considered as mentors
+              // Get all students assigned to this user as mentor
+              const mentees = await UserService.getStudentsByMentor(user.id);
+              
+              // Determine max mentees: super mentors = unlimited (999), regular = max_mentees or default 2
+              const maxMentees = user.isSuperMentor 
+                ? 999 
+                : (user.max_mentees || 2);
+              const currentMentees = mentees.length;
+              const availableSlots = user.isSuperMentor ? 999 : Math.max(0, maxMentees - currentMentees);
+              
+              mentorsWithCapacity.push({
+                mentor: user,
+                current_mentees: currentMentees,
+                max_mentees: maxMentees,
+                available_slots: availableSlots,
+                mentee_names: mentees.map(m => m.name)
+              });
+            } catch (userError) {
+              console.warn(`⚠️ MentorshipService: Error processing user ${user.id}:`, userError);
+              // Continue processing other users even if one fails
+            }
+          }
 
-      console.log(`✅ MentorshipService: Processed ${mentorsWithCapacity.length} mentors with capacity`);
-      return mentorsWithCapacity;
+          console.log(`✅ MentorshipService: Processed ${mentorsWithCapacity.length} mentors with capacity`);
+          return mentorsWithCapacity;
+        },
+        CACHE_TTL.MEDIUM // Cache for 5 minutes
+      );
     } catch (error) {
       console.error('❌ MentorshipService: Error getting mentors with capacity:', error);
       throw error; // Re-throw to let caller handle the error
@@ -1348,21 +1391,27 @@ export interface PhaseTimelineData {
 
 export class PhaseTimelineService extends FirestoreService {
   static async getAllPhaseTimelines(): Promise<PhaseTimelineData[]> {
-    try {
-      const timelines = await this.getAll<PhaseTimelineData>('phase_timelines');
-      return timelines.sort((a, b) => {
-        // Sort by phase order if available, otherwise by name
-        const aOrder = a.phaseName.match(/Phase (\d+)/)?.[1];
-        const bOrder = b.phaseName.match(/Phase (\d+)/)?.[1];
-        if (aOrder && bOrder) {
-          return parseInt(aOrder) - parseInt(bOrder);
+    return queryCache.get(
+      'phase_timelines:all',
+      async () => {
+        try {
+          const timelines = await this.getAll<PhaseTimelineData>('phase_timelines');
+          return timelines.sort((a, b) => {
+            // Sort by phase order if available, otherwise by name
+            const aOrder = a.phaseName.match(/Phase (\d+)/)?.[1];
+            const bOrder = b.phaseName.match(/Phase (\d+)/)?.[1];
+            if (aOrder && bOrder) {
+              return parseInt(aOrder) - parseInt(bOrder);
+            }
+            return a.phaseName.localeCompare(b.phaseName);
+          });
+        } catch (error) {
+          console.error('Error fetching phase timelines:', error);
+          throw error;
         }
-        return a.phaseName.localeCompare(b.phaseName);
-      });
-    } catch (error) {
-      console.error('Error fetching phase timelines:', error);
-      throw error;
-    }
+      },
+      CACHE_TTL.LONG
+    );
   }
 
   static async getPhaseTimelineByPhaseId(phaseId: string): Promise<PhaseTimelineData | null> {
@@ -1420,6 +1469,8 @@ export class PhaseTimelineService extends FirestoreService {
           });
         }
       }
+      // Invalidate phase timeline caches
+      queryCache.invalidatePattern('phase_timelines');
     } catch (error) {
       console.error('Error updating phase timeline:', error);
       throw error;

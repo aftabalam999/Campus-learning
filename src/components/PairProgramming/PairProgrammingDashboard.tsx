@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../hooks/useModal';
 import { EnhancedPairProgrammingService, EnhancedLeaveService } from '../../services/dataServices';
-import { PairProgrammingSession, UserRole, RolePermissions, CalendarEvent } from '../../types/index';
+import {
+  PairProgrammingSession,
+  DashboardData,
+  UserRole,
+  RolePermissions,
+  CalendarEvent
+} from '../../types';
 import { Plus, Calendar, Users, TrendingUp, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import PairProgrammingRequestModal from './PairProgrammingRequestModal';
 import SessionDetailsModal from './SessionDetailsModal';
@@ -13,9 +19,7 @@ import Leaderboard from './Leaderboard';
 const PairProgrammingDashboard: React.FC = () => {
   const { userData } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'sessions' | 'calendar' | 'leaderboard'>('overview');
-  const [sessions, setSessions] = useState<PairProgrammingSession[]>([]);
-  const [userStats, setUserStats] = useState<any>(null);
-
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('mentee');
   const [permissions, setPermissions] = useState<RolePermissions>({
@@ -40,8 +44,12 @@ const PairProgrammingDashboard: React.FC = () => {
 
   // Handle calendar event clicks
   const handleCalendarEventClick = (event: CalendarEvent) => {
-    if (event.session_id) {
-      const session = sessions.find(s => s.id === event.session_id);
+    // Find the corresponding session in dashboardData
+    if (dashboardData && event.session_id) {
+      const session = dashboardData.upcoming_sessions.find(s => s.id === event.session_id) ||
+                      dashboardData.todays_sessions.find(s => s.id === event.session_id) ||
+                      dashboardData.recent_completed.find(s => s.id === event.session_id);
+      
       if (session) {
         setSelectedSession(session);
         setShowSessionModal(true);
@@ -74,39 +82,105 @@ const PairProgrammingDashboard: React.FC = () => {
     setPermissions(perms);
   }, [userData]);
 
-
-  // Optimized: Fetch all sessions once, cache in state, and useMemo for derived data
+  // Load dashboard data
   const loadDashboardData = useCallback(async () => {
     if (!userData) return;
-    setLoading(true);
-    try {
-      let fetchedSessions: PairProgrammingSession[] = [];
-      if (permissions.viewable_users === 'all') {
-        fetchedSessions = await EnhancedPairProgrammingService.getPendingSessions();
-      } else if (permissions.viewable_users === 'mentees_only') {
-        fetchedSessions = await EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'mentor');
-      } else {
-        fetchedSessions = await EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'all');
-      }
-      setSessions(fetchedSessions);
-      // Compute stats locally
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const sessionsThisWeek = fetchedSessions.filter(s => new Date(s.created_at) >= weekAgo);
-      setUserStats({
-        total_sessions_all_time: fetchedSessions.length,
-        sessions_last_7_days: sessionsThisWeek.length,
-        sessions_this_week: sessionsThisWeek.length,
-        expected_sessions_this_week: 0,
-        pending_sessions: fetchedSessions.filter(s => ['pending', 'assigned'].includes(s.status)).length,
-        overdue_sessions: 0,
-        mentees_with_overdue_sessions: 0,
-        average_sessions_per_mentee: userRole === 'mentor' ? 0 : fetchedSessions.length,
-        average_sessions_per_mentor: userRole === 'mentee' ? 0 : fetchedSessions.length
-      });
-      // Get leave data
-      const leaves = await EnhancedLeaveService.getLeavesToday();
 
+    try {
+      setLoading(true);
+
+      // Get user stats
+      const userStats = await EnhancedPairProgrammingService.getUserStats(
+        userData.id,
+        userRole === 'mentee' ? 'mentee' : 'mentor'
+      );
+
+      // Get sessions based on permissions
+      let sessions: PairProgrammingSession[] = [];
+      if (permissions.viewable_users === 'all') {
+        sessions = await EnhancedPairProgrammingService.getPendingSessions();
+      } else if (permissions.viewable_users === 'mentees_only') {
+        // Get sessions for all mentees of this mentor
+        // This would need to be implemented
+        sessions = await EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'mentor');
+      } else {
+        sessions = await EnhancedPairProgrammingService.getSessionsByUser(userData.id, 'all');
+      }
+
+
+
+  // DEBUG: Log all fetched sessions for this user
+  console.log('[DEBUG] All fetched sessions for user', userData?.id, sessions);
+
+  // Get today's date at midnight
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+
+      // Upcoming: all sessions scheduled today or later, with status pending/assigned/scheduled/in_progress
+      const upcomingStatuses = ['pending', 'assigned', 'scheduled', 'in_progress'];
+      const upcomingSessions = sessions.filter(session => {
+        if (!session.scheduled_date) return false;
+        const sessionDate = new Date(session.scheduled_date);
+        return sessionDate >= today && upcomingStatuses.includes(session.status);
+      }).sort((a, b) => new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime());
+
+      // Past: all completed or cancelled sessions, sorted by most recent
+      const pastSessions = sessions.filter(s => ['completed', 'cancelled'].includes(s.status))
+        .sort((a, b) => {
+          // Use completed_at or cancelled_at for sorting
+          const aDate = a.status === 'completed' ? new Date(a.completed_at || 0) : new Date(a.cancelled_at || 0);
+          const bDate = b.status === 'completed' ? new Date(b.completed_at || 0) : new Date(b.cancelled_at || 0);
+          return bDate.getTime() - aDate.getTime();
+        });
+
+      // Today's sessions: subset of upcoming that are scheduled for today
+      const todaysSessions = upcomingSessions.filter(session => {
+        if (!session.scheduled_date) return false;
+        const sessionDate = new Date(session.scheduled_date);
+        return sessionDate >= today && sessionDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      });
+
+      // Pending requests (unchanged)
+      const pendingRequests = sessions.filter(s => s.status === 'pending' && !s.mentor_id);
+
+      // Get leave data
+      const leavesToday = await EnhancedLeaveService.getLeavesToday();
+
+      // Mock leaderboard data (would be calculated from actual data)
+      const leaderboard = {
+        mentors: [],
+        mentees: []
+      };
+
+      // Mock calendar events
+      const calendarEvents = sessions.map(session => ({
+        id: session.id,
+        type: 'pair_session' as const,
+        title: `Pair Programming: ${session.topic}`,
+        description: session.description,
+        start_date: session.scheduled_date || new Date(),
+        user_id: session.student_id,
+        session_id: session.id,
+        status: (session.status === 'scheduled' || session.status === 'in_progress' ? 'scheduled' :
+                session.status === 'completed' ? 'completed' :
+                session.status === 'cancelled' ? 'cancelled' : 'scheduled') as 'scheduled' | 'completed' | 'cancelled' | 'overdue',
+        priority: session.priority
+      }));
+
+
+      const dashboard: DashboardData = {
+        user_stats: userStats,
+        todays_sessions: todaysSessions,
+        upcoming_sessions: upcomingSessions,
+        pending_requests: pendingRequests,
+        recent_completed: pastSessions,
+        leaderboard,
+        calendar_events: calendarEvents,
+        leaves_today: leavesToday
+      };
+
+      setDashboardData(dashboard);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -116,11 +190,11 @@ const PairProgrammingDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData, userRole, permissions]);
+  }, [loadDashboardData]);
 
   const handleTakeSession = async (session: PairProgrammingSession) => {
     if (!userData) return;
+
     try {
       await EnhancedPairProgrammingService.assignMentorToSession(session.id, userData.id);
       await loadDashboardData(); // Refresh data
@@ -159,44 +233,6 @@ const PairProgrammingDashboard: React.FC = () => {
     }
   };
 
-
-
-
-
-  // Memoized derived data (must be before any return)
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-  const upcomingStatuses = useMemo(() => ['pending', 'assigned', 'scheduled', 'in_progress'], []);
-  const upcomingSessions = useMemo(() =>
-    sessions.filter(session => {
-      if (!session.scheduled_date) return false;
-      const sessionDate = new Date(session.scheduled_date);
-      return sessionDate >= today && upcomingStatuses.includes(session.status);
-    }).sort((a, b) => new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime())
-  , [sessions, today, upcomingStatuses]);
-  const pastSessions = useMemo(() =>
-    sessions.filter(s => ['completed', 'cancelled'].includes(s.status))
-      .sort((a, b) => {
-        const aDate = a.status === 'completed' ? new Date(a.completed_at || 0) : new Date(a.cancelled_at || 0);
-        const bDate = b.status === 'completed' ? new Date(b.completed_at || 0) : new Date(b.cancelled_at || 0);
-        return bDate.getTime() - aDate.getTime();
-      })
-  , [sessions]);
-  const todaysSessions = useMemo(() =>
-    upcomingSessions.filter(session => {
-      if (!session.scheduled_date) return false;
-      const sessionDate = new Date(session.scheduled_date);
-      return sessionDate >= today && sessionDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
-    })
-  , [upcomingSessions, today]);
-  const pendingRequests = useMemo(() =>
-    sessions.filter(s => s.status === 'pending' && !s.mentor_id)
-  , [sessions]);
-
-  // If loading, show spinner
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -205,10 +241,16 @@ const PairProgrammingDashboard: React.FC = () => {
     );
   }
 
-  // Memoized derived data
-
-  // Mock leaderboard and calendar events (unchanged)
-
+  if (!dashboardData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900">Unable to load dashboard</h2>
+          <p className="text-gray-600">Please try refreshing the page</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -267,7 +309,7 @@ const PairProgrammingDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Sessions</p>
-                    <p className="text-2xl font-semibold text-gray-900">{userStats?.total_sessions_all_time ?? 0}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{dashboardData.user_stats.total_sessions_all_time}</p>
                   </div>
                 </div>
               </div>
@@ -279,7 +321,7 @@ const PairProgrammingDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">This Week</p>
-                    <p className="text-2xl font-semibold text-gray-900">{userStats?.sessions_this_week ?? 0}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{dashboardData.user_stats.sessions_this_week}</p>
                   </div>
                 </div>
               </div>
@@ -291,7 +333,7 @@ const PairProgrammingDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Pending</p>
-                    <p className="text-2xl font-semibold text-gray-900">{userStats?.pending_sessions ?? 0}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{dashboardData.user_stats.pending_sessions}</p>
                   </div>
                 </div>
               </div>
@@ -303,7 +345,7 @@ const PairProgrammingDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Today</p>
-                    <p className="text-2xl font-semibold text-gray-900">{todaysSessions.length}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{dashboardData.todays_sessions.length}</p>
                   </div>
                 </div>
               </div>
@@ -315,11 +357,11 @@ const PairProgrammingDashboard: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900">Today's Sessions</h3>
               </div>
               <div className="p-6">
-                {todaysSessions.length === 0 ? (
+                {dashboardData.todays_sessions.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">No sessions scheduled for today</p>
                 ) : (
                   <div className="space-y-4">
-                    {todaysSessions.map((session) => (
+                    {dashboardData.todays_sessions.map((session) => (
                       <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div className="flex items-center space-x-4">
                           {getStatusIcon(session.status)}
@@ -352,14 +394,14 @@ const PairProgrammingDashboard: React.FC = () => {
             </div>
 
             {/* Pending Requests (for mentors/admins) */}
-            {permissions.can_reassign_sessions && pendingRequests.length > 0 && (
+            {permissions.can_reassign_sessions && dashboardData.pending_requests.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h3 className="text-lg font-medium text-gray-900">Open Requests</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-4">
-                    {pendingRequests.map((session) => (
+                    {dashboardData.pending_requests.map((session) => (
                       <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                         <div className="flex items-center space-x-4">
                           <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -393,7 +435,7 @@ const PairProgrammingDashboard: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">Sessions scheduled for future dates</p>
               </div>
               <div className="p-6">
-                {upcomingSessions.length === 0 ? (
+                {dashboardData.upcoming_sessions.length === 0 ? (
                   <div className="text-center py-8">
                     <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-500">No upcoming sessions scheduled</p>
@@ -407,7 +449,7 @@ const PairProgrammingDashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {upcomingSessions.map((session) => (
+                    {dashboardData.upcoming_sessions.map((session) => (
                       <div
                         key={session.id}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all"
@@ -470,14 +512,14 @@ const PairProgrammingDashboard: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">Completed and cancelled sessions</p>
               </div>
               <div className="p-6">
-                {pastSessions.length === 0 ? (
+                {dashboardData.recent_completed.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-500">No past sessions yet</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {pastSessions.map((session) => (
+                    {dashboardData.recent_completed.map((session) => (
                       <div
                         key={session.id}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"

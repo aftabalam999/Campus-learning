@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FirestoreService, COLLECTIONS } from '../../services/firestore';
 import { PhaseService, TopicService, PhaseTimelineService } from '../../services/dataServices';
-import { Phase, Topic, DailyGoal, DailyReflection, User } from '../../types';
+import { Phase, Topic, DailyGoal, User } from '../../types';
 import { UserSelector } from '../Common/UserSelector';
 import { CampusFilter } from '../Common/CampusFilter';
 import type { Campus } from '../Common/CampusFilter';
-import { TrendingUp, BookOpen, Target, Award, Calendar } from 'lucide-react';
+import { TrendingUp, BookOpen, Target, Award } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { HouseStatsService, HouseAverageData } from '../../services/houseStatsService';
 
 interface TopicProgress {
   topic: Topic;
@@ -32,11 +33,6 @@ interface PhaseDurationData {
   status: 'completed' | 'current' | 'not_started';
   color: string;
   phaseLabel: string; // For display as "Phase 1", "Phase 2", etc.
-}
-
-interface HouseAverageData {
-  phaseLabel: string;
-  averageDays: number;
 }
 
 interface CombinedChartData {
@@ -113,128 +109,14 @@ const calculatePhaseDurations = (phaseProgress: PhaseProgress[], campusJoiningDa
   return durations;
 };
 
+// OLD EXPENSIVE FUNCTION - REPLACED BY HouseStatsService
+// This function has been moved to HouseStatsService.calculateAndCacheHouseAverages()
+// and should only be triggered by admins manually via the refresh button
+/*
 const calculateHouseAverages = async (house: string, allPhases: Phase[]): Promise<HouseAverageData[]> => {
-  try {
-    const { UserService } = await import('../../services/firestore');
-
-    // Get all students in the house
-    const houseStudents = await UserService.getUsersByHouse(house);
-
-    // Get phase timeline data for expected days
-    const phaseTimelines = await PhaseTimelineService.getAllPhaseTimelines();
-    const timelineMap = new Map(phaseTimelines.map(t => [t.phaseId, t]));
-
-    // Filter out "Self Learning Space" and sort by phase order
-    const filteredPhases = allPhases
-      .filter(phase => phase.name !== 'Self Learning Space')
-      .sort((a, b) => a.order - b.order);
-
-    const averages: HouseAverageData[] = [];
-
-    for (let i = 0; i < filteredPhases.length; i++) {
-      const phase = filteredPhases[i];
-      const phaseDurations: number[] = [];
-      const expectedDays = timelineMap.get(phase.id)?.expectedDays;
-
-      for (const student of houseStudents) {
-        if (!student.campus_joining_date) continue;
-
-        // Get student's goals for this phase
-        const studentGoals = await FirestoreService.getWhere<DailyGoal>(
-          COLLECTIONS.DAILY_GOALS,
-          'student_id',
-          '==',
-          student.id
-        );
-        const phaseGoalsByPhaseId = studentGoals.filter((goal: DailyGoal) => goal.phase_id === phase.id);
-
-        // If student has no goals in this phase, check if they skipped it
-        if (phaseGoalsByPhaseId.length === 0) {
-          // Check if student has goals in any subsequent phases
-          const hasLaterPhases = filteredPhases.slice(i + 1).some(laterPhase => {
-            const laterGoals = studentGoals.filter((goal: DailyGoal) => goal.phase_id === laterPhase.id);
-            return laterGoals.length > 0;
-          });
-
-          // If student has goals in later phases but not this one, they skipped this phase
-          if (hasLaterPhases && expectedDays) {
-            phaseDurations.push(expectedDays);
-          }
-          continue;
-        }
-
-        // Find the earliest goal creation date for this phase
-        // Try phase_id matching first, fallback to topic-based matching
-        let phaseGoalsForDate = studentGoals.filter((goal: DailyGoal) => goal.phase_id === phase.id);
-        let earliestGoalDate: Date;
-
-        if (phaseGoalsForDate.length > 0) {
-          // Use phase_id matching
-          earliestGoalDate = new Date(Math.min(...phaseGoalsForDate.map(g => new Date(g.created_at).getTime())));
-        } else {
-          // Fallback to topic-based matching
-          const phaseTopics = await TopicService.getTopicsByPhase(phase.id);
-          const phaseTopicIds = phaseTopics.map(t => t.id);
-          const reliablePhaseGoals = studentGoals.filter(goal => phaseTopicIds.includes(goal.topic_id));
-          earliestGoalDate = reliablePhaseGoals.length > 0
-            ? new Date(Math.min(...reliablePhaseGoals.map(g => new Date(g.created_at).getTime())))
-            : new Date(Math.min(...phaseGoalsForDate.map(g => new Date(g.created_at).getTime())));
-        }
-
-        // Calculate start date - use earliest goal date for this phase
-        let startDate: Date = earliestGoalDate;
-
-        // Calculate end date (last completion in this phase or current date)
-        let endDate: Date = new Date();
-        let hasCompletedTopics = false;
-
-        for (const goal of phaseGoalsByPhaseId) {
-          try {
-            const reflections = await FirestoreService.getWhere<DailyReflection>(
-              COLLECTIONS.DAILY_REFLECTIONS,
-              'goal_id',
-              '==',
-              goal.id
-            );
-            const reflection = reflections[0];
-            if (reflection && reflection.achieved_percentage === 100) {
-              const completionDate = new Date(reflection.created_at);
-              if (completionDate > endDate || !hasCompletedTopics) {
-                endDate = completionDate;
-                hasCompletedTopics = true;
-              }
-            }
-          } catch (error) {
-            // Continue checking other goals
-          }
-        }
-
-        if (hasCompletedTopics) {
-          const daysSpent = Math.max(0, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-          phaseDurations.push(daysSpent);
-        } else if (expectedDays) {
-          // If student started the phase but hasn't completed it, use expected days
-          phaseDurations.push(expectedDays);
-        }
-      }
-
-      // Calculate average for this phase
-      const averageDays = phaseDurations.length > 0
-        ? Math.round(phaseDurations.reduce((sum, days) => sum + days, 0) / phaseDurations.length)
-        : 0;
-
-      averages.push({
-        phaseLabel: `Phase ${i + 1}`,
-        averageDays
-      });
-    }
-
-    return averages;
-  } catch (error) {
-    console.error('Error calculating house averages:', error);
-    return [];
-  }
+  ... expensive calculation moved to service ...
 };
+*/
 
 const combineChartData = (studentData: PhaseDurationData[], houseData: HouseAverageData[]): CombinedChartData[] => {
   const combined: CombinedChartData[] = [];
@@ -459,14 +341,18 @@ const StudentJourney: React.FC = () => {
       const durationData: PhaseDurationData[] = calculatePhaseDurations(phaseProgressData, userData?.campus_joining_date);
       console.log('Duration data:', durationData);
 
-      // Try to load house averages (this was commented out before)
+      // Load cached house averages (fast - only 3-5 Firestore reads)
       let houseData: HouseAverageData[] = [];
       if (userData?.house) {
         try {
-          setLoadingStage('Checking how other house members are doing...');
-          console.log('Loading house average data...');
-          houseData = await calculateHouseAverages(userData.house, phases);
-          console.log('Loaded house averages:', houseData);
+          setLoadingStage('Loading house comparison data...');
+          console.log('Loading cached house average data...');
+          houseData = await HouseStatsService.getHouseAverages(userData.house);
+          console.log('Loaded house averages from cache:', houseData);
+          
+          if (houseData.length === 0) {
+            console.warn('No cached house stats found. Admin should refresh house statistics.');
+          }
         } catch (error) {
           console.warn('Failed to load house averages:', error);
         }

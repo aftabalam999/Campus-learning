@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { User, MentorAvailability } from '../types';
+import { queryCache } from '../utils/cache';
 
 // Utility function to convert Firestore Timestamps to JavaScript Dates
 function convertTimestampsToDates(obj: any): any {
@@ -62,7 +63,8 @@ export const COLLECTIONS = {
   MENTEE_REVIEWS: 'mentee_reviews',
   MENTEE_REVIEW_CATEGORIES: 'mentee_review_categories',
   MENTOR_AVAILABILITY: 'mentor_availability',
-  CAMPUS_SCHEDULES: 'campus_schedules'
+  CAMPUS_SCHEDULES: 'campus_schedules',
+  HOUSE_STATS: 'house_stats'
 };
 
 // Generic CRUD operations
@@ -306,11 +308,16 @@ export class FirestoreService {
 }
 export class UserService extends FirestoreService {
   static async createUser(userData: Omit<User, 'id'>): Promise<string> {
-    return this.create<User>(COLLECTIONS.USERS, userData);
+    const result = await this.create<User>(COLLECTIONS.USERS, userData);
+    // Invalidate user-related caches
+    queryCache.invalidatePattern('users');
+    return result;
   }
 
   static async createUserWithId(id: string, userData: Omit<User, 'id'>): Promise<void> {
-    return this.createWithId<User>(COLLECTIONS.USERS, id, userData);
+    await this.createWithId<User>(COLLECTIONS.USERS, id, userData);
+    // Invalidate user-related caches
+    queryCache.invalidatePattern('users');
   }
 
   static async getUserById(id: string): Promise<User | null> {
@@ -361,7 +368,9 @@ export class UserService extends FirestoreService {
   }
 
   static async updateUser(id: string, userData: Partial<User>): Promise<void> {
-    return this.update<User>(COLLECTIONS.USERS, id, userData);
+    await this.update<User>(COLLECTIONS.USERS, id, userData);
+    // Invalidate user-related caches
+    queryCache.invalidatePattern('users');
   }
 
   static async assignMentorToStudent(studentId: string, mentorId: string): Promise<void> {

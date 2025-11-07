@@ -391,15 +391,27 @@ const StudentDashboard: React.FC = () => {
           className={`bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow ${
             !stats.latestReview ? 'border-yellow-300 bg-yellow-50' : ''
           }`}
-          onClick={() => stats.latestReview && setShowReviewModal(true)}
+          onClick={() => setShowReviewModal(true)}
         >
           <div className="text-center">
             <p className="text-sm font-medium text-gray-600 mb-2">Performance Review</p>
             {stats.latestReview ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p className="text-2xl font-bold text-gray-900">{stats.reviewScore}/2</p>
+                <div className={`inline-flex items-center space-x-1 text-xs px-3 py-1 rounded-full font-medium ${
+                  (stats.reviewScore ?? 0) >= 1.5 ? 'bg-green-100 text-green-800' :
+                  (stats.reviewScore ?? 0) >= 0.5 ? 'bg-blue-100 text-blue-800' :
+                  (stats.reviewScore ?? 0) >= -0.5 ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {(stats.reviewScore ?? 0) >= 1.5 ? '🌟 Showing great growth' :
+                   (stats.reviewScore ?? 0) >= 0.5 ? '📈 Improving consistently' :
+                   (stats.reviewScore ?? 0) >= -0.5 ? '⚠️ Scope for improvement' :
+                   (stats.reviewScore ?? 0) >= -1.5 ? '🔔 Needs consistent effort' :
+                   '⚡ Needs serious effort'}
+                </div>
                 {stats.reviewTrend !== 'stable' && (
-                  <div className={`inline-flex items-center space-x-1 text-xs px-2 py-1 rounded-full ${
+                  <div className={`inline-flex items-center space-x-1 text-xs px-2 py-1 rounded-full ml-2 ${
                     stats.reviewTrend === 'improving' ? 'bg-green-100 text-green-700' :
                     'bg-red-100 text-red-700'
                   }`}>
@@ -411,11 +423,13 @@ const StudentDashboard: React.FC = () => {
                     <span className="capitalize">{stats.reviewTrend}</span>
                   </div>
                 )}
+                <p className="text-xs text-gray-500 mt-2">Click to view details</p>
               </div>
             ) : (
               <div className="space-y-1">
                 <p className="text-2xl font-bold text-yellow-600">Pending</p>
-                <p className="text-xs text-yellow-700">Awaiting review</p>
+                <p className="text-xs text-yellow-700">Awaiting mentor review</p>
+                <p className="text-xs text-gray-500 mt-2">Click to request review</p>
               </div>
             )}
           </div>
@@ -827,54 +841,88 @@ const StudentDashboard: React.FC = () => {
 
               {/* Category Ratings */}
               <div className="space-y-4 mb-6">
-                <h4 className="font-medium text-gray-900">Category Ratings</h4>
+                <h4 className="font-medium text-gray-900 mb-2">Category Ratings</h4>
                 {[
-                  { key: 'morning_exercise', label: 'Morning Exercise', value: stats.latestReview.morning_exercise },
-                  { key: 'communication', label: 'Communication', value: stats.latestReview.communication },
-                  { key: 'academic_effort', label: 'Academic Effort', value: stats.latestReview.academic_effort },
-                  { key: 'campus_contribution', label: 'Campus Contribution', value: stats.latestReview.campus_contribution },
-                  { key: 'behavioural', label: 'Behavioral', value: stats.latestReview.behavioural }
-                ].map((category) => (
-                  <div key={category.key} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-900">{category.label}</span>
-                      <span className={`px-2 py-1 rounded text-sm font-bold ${
-                        category.value >= 1 ? 'bg-green-100 text-green-800' :
-                        category.value >= 0 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                  { key: 'morning_exercise', label: 'Morning Exercise', value: stats.latestReview.morning_exercise, icon: '🏃' },
+                  { key: 'communication', label: 'Communication', value: stats.latestReview.communication, icon: '💬' },
+                  { key: 'academic_effort', label: 'Academic Effort', value: stats.latestReview.academic_effort, icon: '📚' },
+                  { key: 'campus_contribution', label: 'Campus Contribution', value: stats.latestReview.campus_contribution, icon: '🤝' },
+                  { key: 'behavioural', label: 'Behavioral', value: stats.latestReview.behavioural, icon: '⭐' }
+                ].map((category) => {
+                  const interpretation = 
+                    category.value === 2 ? 'Showing great growth' :
+                    category.value === 1 ? 'Improving consistently' :
+                    category.value === 0 ? 'Has scope for improvement' :
+                    category.value === -1 ? 'Needs consistent effort' :
+                    'Needs to put in serious effort';
+                  
+                  const isPriority = category.value <= -1;
+                  
+                  return (
+                    <div 
+                      key={category.key} 
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        isPriority ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl">{category.icon}</span>
+                          <span className="font-medium text-gray-900">{category.label}</span>
+                          {isPriority && (
+                            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium">
+                              Focus Area
+                            </span>
+                          )}
+                        </div>
+                        <span className={`px-2 py-1 rounded text-sm font-bold ${
+                          category.value >= 1 ? 'bg-green-100 text-green-800' :
+                          category.value >= 0 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {category.value > 0 ? '+' : ''}{category.value}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            category.value >= 1 ? 'bg-green-500' :
+                            category.value >= 0 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${((category.value + 2) / 4) * 100}%` }}
+                        ></div>
+                      </div>
+                      <p className={`text-xs font-medium ${
+                        category.value >= 1 ? 'text-green-700' :
+                        category.value >= 0 ? 'text-yellow-700' :
+                        'text-red-700'
                       }`}>
-                        {category.value > 0 ? '+' : ''}{category.value}
-                      </span>
+                        {interpretation}
+                      </p>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          category.value >= 1 ? 'bg-green-500' :
-                          category.value >= 0 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${((category.value + 2) / 4) * 100}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>Poor (-2)</span>
-                      <span>Average (0)</span>
-                      <span>Excellent (+2)</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Overall Score */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg mb-6">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg mb-6 border-2 border-purple-200">
                 <div className="text-center">
                   <p className="text-sm font-medium text-gray-700 mb-2">Overall Average Score</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.reviewScore ?? 0}/2</p>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <div className={`inline-flex items-center space-x-1 text-sm px-3 py-1.5 rounded-full font-medium mt-2 ${
+                    (stats.reviewScore ?? 0) >= 1.5 ? 'bg-green-100 text-green-800' :
+                    (stats.reviewScore ?? 0) >= 0.5 ? 'bg-blue-100 text-blue-800' :
+                    (stats.reviewScore ?? 0) >= -0.5 ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
                     {stats.reviewScore !== undefined ? (
-                      stats.reviewScore >= 1 ? 'Good performance' :
-                      stats.reviewScore >= 0 ? 'Needs improvement' : 'Requires attention'
+                      (stats.reviewScore ?? 0) >= 1.5 ? '🌟 Showing great growth!' :
+                      (stats.reviewScore ?? 0) >= 0.5 ? '📈 Improving consistently' :
+                      (stats.reviewScore ?? 0) >= -0.5 ? '⚠️ Has scope for improvement' :
+                      (stats.reviewScore ?? 0) >= -1.5 ? '🔔 Needs consistent effort' :
+                      '⚡ Needs to put in serious effort'
                     ) : 'Loading...'}
-                  </p>
+                  </div>
                 </div>
               </div>
 
@@ -892,10 +940,48 @@ const StudentDashboard: React.FC = () => {
                 </div>
               </div>
 
+              {/* Priority Areas to Focus */}
+              {(() => {
+                const priorityAreas = [
+                  { key: 'morning_exercise', label: 'Morning Exercise', value: stats.latestReview.morning_exercise, icon: '🏃' },
+                  { key: 'communication', label: 'Communication', value: stats.latestReview.communication, icon: '💬' },
+                  { key: 'academic_effort', label: 'Academic Effort', value: stats.latestReview.academic_effort, icon: '📚' },
+                  { key: 'campus_contribution', label: 'Campus Contribution', value: stats.latestReview.campus_contribution, icon: '🤝' },
+                  { key: 'behavioural', label: 'Behavioral', value: stats.latestReview.behavioural, icon: '⭐' }
+                ].filter(area => area.value <= -1);
+
+                return priorityAreas.length > 0 ? (
+                  <div className="bg-red-50 p-4 rounded-lg border-l-4 border-red-400 mb-6">
+                    <p className="text-sm font-medium text-red-800 mb-3 flex items-center">
+                      <span className="text-lg mr-2">🎯</span>
+                      Priority Areas to Focus ({priorityAreas.length})
+                    </p>
+                    <ul className="space-y-2">
+                      {priorityAreas.map(area => (
+                        <li key={area.key} className="text-sm text-red-700 flex items-center">
+                          <span className="mr-2">{area.icon}</span>
+                          <span className="font-medium">{area.label}</span>
+                          <span className="ml-auto text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">
+                            {area.value === -2 ? 'Needs serious effort' : 'Needs consistent effort'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-400 mb-6">
+                    <p className="text-sm font-medium text-green-800 flex items-center">
+                      <span className="text-lg mr-2">✨</span>
+                      Great job! No critical areas. Keep up the good work!
+                    </p>
+                  </div>
+                );
+              })()}
+
               {/* Mentor Notes */}
               {stats.latestReview.notes && (
                 <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-                  <p className="text-sm font-medium text-blue-800 mb-2">Mentor Notes</p>
+                  <p className="text-sm font-medium text-blue-800 mb-2">💬 Mentor Notes</p>
                   <p className="text-sm text-blue-700 leading-relaxed">{stats.latestReview.notes}</p>
                 </div>
               )}
