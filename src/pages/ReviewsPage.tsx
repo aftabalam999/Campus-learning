@@ -480,10 +480,10 @@ const ReviewsPage: React.FC = () => {
             // Mentor Tab
             <div>
 {mentorData ? (
-                <div className="bg-white rounded-lg shadow-sm border-l-4 border-purple-500 p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <div className="bg-white rounded-lg shadow-sm border-l-4 border-purple-500 p-2 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-0">
                     <div className="flex items-start sm:items-center space-x-4 min-w-0">
-                      <div className="relative w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                      <div className="relative w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
                         <span className="text-2xl font-bold text-purple-600">
                           {mentorData.name.charAt(0).toUpperCase()}
                         </span>

@@ -120,7 +120,7 @@ const DailyReflectionForm: React.FC<DailyReflectionFormProps> = ({
   if (!showForm) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center space-x-3">
             <MessageSquare className="h-5 w-5 text-primary-600" />
             <div>

@@ -9,6 +9,7 @@ interface AuthContextType {
   userData: User | null;
   setUserData: React.Dispatch<React.SetStateAction<User | null>>;
   loading: boolean;
+  loadingError: string | null;
   signInWithGoogle: () => Promise<FirebaseUser>;
   signOut: () => Promise<void>;
   isAdmin: () => boolean;
@@ -36,6 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   // Initialize auth state - simple listener only
   useEffect(() => {
@@ -44,14 +46,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = AuthService.onAuthStateChanged(async (user) => {
       console.log('👤 Auth state changed:', user ? user.email : 'no user');
       setCurrentUser(user);
+      setLoadingError(null);
       
       if (user) {
+        // Set a timeout for fetching user data (10 seconds)
+        const timeoutId = setTimeout(() => {
+          console.warn('⚠️ Loading user data is taking too long...');
+          setLoadingError('User data is taking too long to load. Please login again.');
+          setLoading(false);
+        }, 10000);
+
         // Load user data from Firestore
         try {
           console.log('📥 Loading user data...');
           const data = await AuthService.getCurrentUserData();
+          clearTimeout(timeoutId);
+          
+          if (!data) {
+            // User not found in database
+            console.warn('⚠️ User not found in database');
+            setLoadingError('Your profile is not found. Please contact support or login again.');
+            setUserData(null);
+            setLoading(false);
+            return;
+          }
+
           console.log('✅ User data loaded:', data?.name);
           setUserData(data);
+          setLoadingError(null);
 
           // Track login (non-blocking, only once per day)
           if (data) {
@@ -60,11 +82,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
           }
         } catch (error) {
+          clearTimeout(timeoutId);
           console.error('❌ Error loading user data:', error);
+          setLoadingError('Failed to load user data. Please login again.');
           setUserData(null);
         }
       } else {
         setUserData(null);
+        setLoadingError(null);
       }
       
       setLoading(false);
@@ -136,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userData,
     setUserData,
     loading,
+    loadingError,
     signInWithGoogle,
     signOut,
     isAdmin,
