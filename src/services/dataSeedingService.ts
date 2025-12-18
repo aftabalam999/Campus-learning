@@ -4,11 +4,11 @@ export class DataSeedingService {
   static async seedInitialData(): Promise<boolean> {
     try {
       console.log('Starting data seeding...');
-      
+
       // Get existing phases to check what's already seeded
       const existingPhases = await PhaseService.getAllPhases();
       const existingPhaseNames = existingPhases.map(p => p.name);
-      
+
       console.log('Existing phases:', existingPhaseNames);
 
       // Import all phase/topic files
@@ -26,26 +26,35 @@ export class DataSeedingService {
         // For initialData, use initialPhases and detailedTopics
         if (phaseFile.initialPhases && phaseFile.detailedTopics) {
           for (const phaseData of phaseFile.initialPhases) {
-            // Check if phase already exists
-            if (existingPhaseNames.includes(phaseData.name)) {
-              console.log(`Phase already exists, skipping: ${phaseData.name}`);
-              continue;
+            let phaseId: string;
+            const existingPhase = existingPhases.find(p => p.name === phaseData.name);
+
+            if (existingPhase) {
+              console.log(`Phase already exists, checking topics: ${phaseData.name}`);
+              phaseId = existingPhase.id;
+            } else {
+              phaseId = await PhaseService.createPhase({
+                ...phaseData,
+                created_at: new Date()
+              });
+              console.log(`Created phase: ${phaseData.name}`);
             }
-            
-            const phaseId = await PhaseService.createPhase({
-              ...phaseData,
-              created_at: new Date()
-            });
-            console.log(`Created phase: ${phaseData.name}`);
+
             const topicsForPhase = phaseFile.detailedTopics[phaseData.name];
             if (topicsForPhase) {
+              // Get existing topics to avoid duplicates
+              const existingTopics = await TopicService.getTopicsByPhase(phaseId);
+              const existingTopicNames = existingTopics.map(t => t.name);
+
               for (const topicData of topicsForPhase) {
-                await TopicService.createTopic({
-                  ...topicData,
-                  phase_id: phaseId,
-                  created_at: new Date()
-                });
-                console.log(`Created topic: ${topicData.name} for phase: ${phaseData.name}`);
+                if (!existingTopicNames.includes(topicData.name)) {
+                  await TopicService.createTopic({
+                    ...topicData,
+                    phase_id: phaseId,
+                    created_at: new Date()
+                  });
+                  console.log(`Created topic: ${topicData.name} for phase: ${phaseData.name}`);
+                }
               }
             }
           }
@@ -65,7 +74,7 @@ export class DataSeedingService {
               console.log(`Phase already exists, skipping: ${name}`);
               continue;
             }
-            
+
             const phaseData = {
               name,
               order: order
@@ -94,11 +103,11 @@ export class DataSeedingService {
   static async resetData(): Promise<boolean> {
     try {
       console.log('Resetting data...');
-      
+
       // Note: In a production environment, you might want more careful deletion
       // This is for development/demo purposes
       console.warn('Data reset functionality should be used carefully in production');
-      
+
       return true;
     } catch (error) {
       console.error('Error resetting data:', error);
@@ -115,7 +124,7 @@ export class DataSeedingService {
     try {
       const phases = await PhaseService.getAllPhases();
       let topicsCount = 0;
-      
+
       for (const phase of phases) {
         const topics = await TopicService.getTopicsByPhase(phase.id);
         topicsCount += topics.length;
@@ -142,28 +151,28 @@ export class DataSeedingService {
   static async cleanupCurriculumData(): Promise<boolean> {
     try {
       console.log('🧹 Starting curriculum data cleanup...');
-      
+
       // Get all existing phases
       const existingPhases = await PhaseService.getAllPhases();
       console.log(`Found ${existingPhases.length} phases to clean up`);
-      
+
       // Delete all topics for each phase
       for (const phase of existingPhases) {
         console.log(`Cleaning up topics for phase: ${phase.name}`);
         const topics = await TopicService.getTopicsByPhase(phase.id);
-        
+
         for (const topic of topics) {
           await TopicService.deleteTopic(topic.id);
         }
         console.log(`Deleted ${topics.length} topics from ${phase.name}`);
       }
-      
+
       // Delete all phases
       for (const phase of existingPhases) {
         console.log(`Deleting phase: ${phase.name}`);
         await PhaseService.deletePhase(phase.id);
       }
-      
+
       console.log('✅ Curriculum data cleanup completed successfully');
       return true;
     } catch (error) {

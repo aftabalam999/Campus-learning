@@ -36,6 +36,26 @@ export const initialPhases: Array<{ name: string; order: number; isSenior?: bool
     order: 3
   },
   {
+    name: 'Phase 3: Interactive Quiz Master',
+    order: 4
+  },
+  {
+    name: 'Phase 4: AI-Powered Content Generator',
+    order: 5
+  },
+  {
+    name: 'Phase 5: Ask Gemini Web App',
+    order: 6
+  },
+  {
+    name: 'Phase 6: Student Feedback Manager',
+    order: 7
+  },
+  {
+    name: 'Phase 7: CollabSphere',
+    order: 8
+  },
+  {
     name: 'Self Learning Space',
     order: -1
   }
@@ -1390,7 +1410,7 @@ export const goalTemplates: { [topicName: string]: string[] } = {
 export const getTopicDetails = (phaseName: string, topicName: string): TopicDetails | null => {
   const phaseTopics = detailedTopics[phaseName];
   if (!phaseTopics) return null;
-  
+
   return phaseTopics.find(topic => topic.name === topicName) || null;
 };
 
