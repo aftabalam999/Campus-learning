@@ -480,14 +480,9 @@ const AdminJourneyTracking: React.FC = () => {
           return (
             <div key={phase.phaseId} className="bg-white rounded-lg shadow-md border border-gray-200 flex flex-col">
               <div className="p-6 pb-3">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">{phase.phaseName}</h3>
-                  </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {phase.totalStudents} students
-                  </span>
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">{phase.phaseName}</h3>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
@@ -570,16 +565,11 @@ const AdminJourneyTracking: React.FC = () => {
               return (
                 <div key={phase.phaseId} className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg shadow-md border border-purple-200 flex flex-col">
                   <div className="p-6 pb-3">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded-full bg-purple-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">S</span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900">{phase.phaseName}</h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-5 w-5 rounded-full bg-purple-600 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">S</span>
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        {phase.totalStudents} students
-                      </span>
+                      <h3 className="text-lg font-semibold text-gray-900">{phase.phaseName}</h3>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
