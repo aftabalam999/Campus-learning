@@ -26,3 +26,9 @@ yarn-error.log*
 # Service Account Keys (sensitive)
 scripts/*service-account*.json
 scripts/dharamshalacampus-*.json
+# Deployment and configuration files with secrets
+DEPLOYMENT.md
+DISCORD_NOTIFICATION_SETUP.md
+GIT_HISTORY_PURGE.md
+TASK_18_HISTORICAL_TRENDS_DISCORD.md
+fix_review_dates.js
