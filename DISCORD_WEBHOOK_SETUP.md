@@ -44,7 +44,7 @@ For each channel:
    ```
    https://discord.com/api/webhooks/[WEBHOOK_ID]/[WEBHOOK_TOKEN]
    ```
-   Example: `https://discord.com/api/webhooks/123456789012345678/aBcDeFgHiJkLmNoPqRsTuVwXyZ`
+   Example format: `https://discord.com/api/webhooks/YOUR_ID_HERE/YOUR_TOKEN_HERE`
 8. **Save** the webhook
 
 ### 3. Update .env File
