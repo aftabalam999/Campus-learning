@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calendar, CheckCircle, X } from 'lucide-react';
 import { User as UserType } from '../../types';
 import { UserService } from '../../services/firestore';
+import { LoginTrackingService } from '../../services/loginTrackingService';
 
 interface CampusJoiningDateModalProps {
   isOpen: boolean;
@@ -58,6 +59,13 @@ export default function CampusJoiningDateModal({
 
       const updatedUser = { ...user, campus_joining_date: selectedDate };
       onDateUpdated(updatedUser);
+      
+      // Check if this completes the profile for a first-time user
+      // and send Discord notification if needed
+      LoginTrackingService.checkAndSendPostponedNotification(updatedUser).catch(err => {
+        console.error('Error checking postponed notification:', err);
+      });
+      
       onClose();
     } catch (error) {
       console.error('Error updating joining date:', error);

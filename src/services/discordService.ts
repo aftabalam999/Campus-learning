@@ -13,6 +13,8 @@ export interface DiscordUser {
   campus?: string;
   role?: string;
   login_time?: Date;
+  house?: string;
+  campus_joining_date?: Date;
 }
 
 export interface AttendanceSummary {
@@ -129,6 +131,93 @@ export class DiscordService {
     };
 
     await this.sendWebhook({
+      embeds: [embed],
+    });
+  }
+
+  /**
+   * Send first-time login notification
+   * Called when a user logs in for the very first time
+   */
+  static async sendFirstTimeLoginNotification(user: DiscordUser): Promise<void> {
+    const mentionUser = user.discord_user_id 
+      ? `<@${user.discord_user_id.replace(/[@#]/g, '')}>` 
+      : user.name;
+
+    const time = user.login_time 
+      ? user.login_time.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })
+      : new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+
+    const joiningDate = user.campus_joining_date
+      ? user.campus_joining_date.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : 'Not set';
+
+    const fields = [
+      {
+        name: '👤 User',
+        value: user.name,
+        inline: true,
+      },
+      {
+        name: '🏫 Campus',
+        value: user.campus || 'Not set',
+        inline: true,
+      },
+      {
+        name: '🎭 Role',
+        value: user.role || 'Student',
+        inline: true,
+      },
+      {
+        name: '⏰ Login Time',
+        value: time,
+        inline: true,
+      },
+    ];
+
+    // Add house if available
+    if (user.house) {
+      fields.push({
+        name: '🏠 House',
+        value: user.house,
+        inline: true,
+      });
+    }
+
+    // Add joining date if available
+    if (user.campus_joining_date) {
+      fields.push({
+        name: '📅 Joining Date',
+        value: joiningDate,
+        inline: true,
+      });
+    }
+
+    const embed = {
+      title: '🎉 First-Time Login!',
+      description: `${mentionUser} has logged in for the **first time**! Welcome aboard! 🚀`,
+      color: 0xf59e0b, // Orange/Gold - to stand out
+      fields,
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Campus Learning Dashboard - Welcome Team!',
+      },
+    };
+
+    await this.sendWebhook({
+      content: '🎊 **New User Alert!** 🎊',
       embeds: [embed],
     });
   }

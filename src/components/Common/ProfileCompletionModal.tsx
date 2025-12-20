@@ -3,6 +3,7 @@ import { User, Building, Home, Code, CheckCircle } from 'lucide-react';
 import Toast from './Toast';
 import { User as UserType } from '../../types';
 import { UserService } from '../../services/firestore';
+import { LoginTrackingService } from '../../services/loginTrackingService';
 
 interface ProfileCompletionModalProps {
   isOpen: boolean;
@@ -145,6 +146,13 @@ export default function ProfileCompletionModal({
       await UserService.updateUser(user.id, updates);
       const updatedUser = { ...user, ...updates };
       onProfileUpdated(updatedUser);
+      
+      // Check if this completes the profile for a first-time user
+      // and send Discord notification if needed
+      LoginTrackingService.checkAndSendPostponedNotification(updatedUser).catch(err => {
+        console.error('Error checking postponed notification:', err);
+      });
+      
       // show a small toast and then close
       setToast({ visible: true, message: 'Profile saved', type: 'success' });
       setTimeout(() => {

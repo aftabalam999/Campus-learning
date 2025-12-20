@@ -23,6 +23,7 @@ export interface LoginRecord {
 
 export class LoginTrackingService {
   private static LOGIN_STORAGE_KEY = 'last_login_date';
+  private static FIRST_LOGIN_KEY = 'first_login_recorded';
   private static DISCORD_NOTIFICATIONS_ENABLED = true;
 
   /**
@@ -30,6 +31,64 @@ export class LoginTrackingService {
    */
   private static getTodayDate(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  /**
+   * Check if this is the user's first login ever
+   * Checks both Firestore and localStorage
+   */
+  private static async isFirstTimeLogin(userId: string): Promise<boolean> {
+    // First check localStorage for quick check
+    try {
+      const hasLoggedInBefore = localStorage.getItem(`${this.FIRST_LOGIN_KEY}_${userId}`);
+      if (hasLoggedInBefore === 'true') {
+        return false; // Already logged in before
+      }
+    } catch (error) {
+      console.warn('Error checking localStorage for first login:', error);
+    }
+
+    // Check Firestore to see if user has any historical login records
+    try {
+      const loginsRef = collection(db, 'daily_logins');
+      const snapshot = await getDocs(loginsRef);
+      
+      // Check all date documents for this user
+      for (const dateDoc of snapshot.docs) {
+        const userLoginRef = doc(db, 'daily_logins', dateDoc.id, 'logins', userId);
+        const userLoginDoc = await getDocs(collection(db, 'daily_logins', dateDoc.id, 'logins'));
+        
+        // If we find any login record for this user, it's not their first login
+        const hasRecord = userLoginDoc.docs.some(doc => doc.id === userId);
+        if (hasRecord) {
+          // Update localStorage cache
+          try {
+            localStorage.setItem(`${this.FIRST_LOGIN_KEY}_${userId}`, 'true');
+          } catch (e) {
+            console.warn('Could not update localStorage:', e);
+          }
+          return false;
+        }
+      }
+
+      // No records found - this is the first login!
+      return true;
+    } catch (error) {
+      console.error('Error checking first time login in Firestore:', error);
+      // On error, assume not first login to avoid spam
+      return false;
+    }
+  }
+
+  /**
+   * Mark user as having logged in before (for first-time login tracking)
+   */
+  private static markFirstLoginRecorded(userId: string): void {
+    try {
+      localStorage.setItem(`${this.FIRST_LOGIN_KEY}_${userId}`, 'true');
+    } catch (error) {
+      console.error('Error updating first login localStorage:', error);
+    }
   }
 
   /**
@@ -65,27 +124,27 @@ export class LoginTrackingService {
     const today = this.getTodayDate();
     const loginTime = new Date();
 
-    const loginRecord: Partial<LoginRecord> = {
+    // Build login record, only including defined values (Firestore doesn't accept undefined)
+    const loginRecord: any = {
       user_id: user.id,
       user_name: user.name,
       user_email: user.email,
-      campus: user.campus,
-      house: user.house,
       role: user.role || (user.isAdmin ? 'admin' : user.isMentor ? 'mentor' : 'student'),
-      discord_user_id: user.discord_user_id,
-      login_time: loginTime,
+      login_time: serverTimestamp(),
+      updated_at: serverTimestamp(),
       date: today,
     };
+
+    // Only add optional fields if they have values
+    if (user.campus) loginRecord.campus = user.campus;
+    if (user.house) loginRecord.house = user.house;
+    if (user.discord_user_id) loginRecord.discord_user_id = user.discord_user_id;
 
     try {
       // Store in daily_logins/{date}/logins/{user_id}
       const loginDocRef = doc(db, 'daily_logins', today, 'logins', user.id);
       
-      await setDoc(loginDocRef, {
-        ...loginRecord,
-        login_time: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      }, { merge: true });
+      await setDoc(loginDocRef, loginRecord, { merge: true });
 
       console.log('✅ Login recorded in Firestore');
     } catch (error) {
@@ -96,8 +155,9 @@ export class LoginTrackingService {
 
   /**
    * Send Discord notification for login
+   * Detects and sends special notification for first-time logins
    */
-  private static async sendDiscordNotification(user: User): Promise<void> {
+  private static async sendDiscordNotification(user: User, isFirstTime: boolean = false): Promise<void> {
     if (!this.DISCORD_NOTIFICATIONS_ENABLED) {
       console.log('Discord notifications disabled, skipping');
       return;
@@ -110,10 +170,17 @@ export class LoginTrackingService {
         campus: user.campus,
         role: user.role || (user.isAdmin ? 'Admin' : user.isMentor ? 'Mentor' : 'Student'),
         login_time: new Date(),
+        house: user.house,
+        campus_joining_date: user.campus_joining_date,
       };
 
-      await DiscordService.sendLoginNotification(discordUser);
-      console.log('✅ Discord notification sent');
+      if (isFirstTime) {
+        await DiscordService.sendFirstTimeLoginNotification(discordUser);
+        console.log('🎉 First-time login Discord notification sent');
+      } else {
+        await DiscordService.sendLoginNotification(discordUser);
+        console.log('✅ Discord notification sent');
+      }
     } catch (error) {
       // Don't throw - Discord notifications are non-critical
       console.error('❌ Failed to send Discord notification:', error);
@@ -123,6 +190,7 @@ export class LoginTrackingService {
   /**
    * Track user login
    * Called once when user successfully logs in
+   * Detects and celebrates first-time logins!
    */
   static async trackLogin(user: User): Promise<void> {
     if (!user || !user.id) {
@@ -139,16 +207,39 @@ export class LoginTrackingService {
     console.log('🔄 Tracking login for:', user.name);
 
     try {
+      // Check if this is the user's first login ever
+      const isFirstTime = await this.isFirstTimeLogin(user.id);
+      
+      if (isFirstTime) {
+        console.log('🎉 First-time login detected for:', user.name);
+      }
+
       // Record in Firestore
       await this.recordLoginInFirestore(user);
 
-      // Send Discord notification (non-blocking)
-      this.sendDiscordNotification(user).catch(err => {
-        console.error('Discord notification error (non-blocking):', err);
-      });
+      // Check if user has completed their profile (campus and joining date)
+      const hasCompletedProfile = user.campus && user.campus_joining_date;
 
-      // Mark as logged in today
-      this.markLoggedInToday(user.id);
+      // Send Discord notification (non-blocking)
+      // For first-time logins, only send if profile is completed
+      if (isFirstTime && !hasCompletedProfile) {
+        console.log('⏳ First-time login notification postponed - waiting for profile completion');
+        // Still mark as logged in today, but don't mark first login as recorded yet
+        this.markLoggedInToday(user.id);
+      } else {
+        // Send appropriate notification
+        this.sendDiscordNotification(user, isFirstTime).catch(err => {
+          console.error('Discord notification error (non-blocking):', err);
+        });
+
+        // Mark as logged in today
+        this.markLoggedInToday(user.id);
+
+        // If first time, mark it as recorded
+        if (isFirstTime) {
+          this.markFirstLoginRecorded(user.id);
+        }
+      }
 
       console.log('✅ Login tracking complete');
     } catch (error) {
@@ -307,6 +398,50 @@ export class LoginTrackingService {
       console.log('✅ Login tracking localStorage cleared');
     } catch (error) {
       console.error('Error clearing localStorage:', error);
+    }
+  }
+
+  /**
+   * Check and send first-time login notification if it was postponed
+   * Call this after user completes their profile (campus and joining date)
+   */
+  static async checkAndSendPostponedNotification(user: User): Promise<void> {
+    if (!user || !user.id) {
+      return;
+    }
+
+    try {
+      // Check if user has already been marked as first login recorded
+      const hasBeenRecorded = localStorage.getItem(`${this.FIRST_LOGIN_KEY}_${user.id}`);
+      if (hasBeenRecorded === 'true') {
+        // Already sent notification before
+        return;
+      }
+
+      // Check if user has completed profile
+      const hasCompletedProfile = user.campus && user.campus_joining_date;
+      if (!hasCompletedProfile) {
+        // Profile still incomplete
+        return;
+      }
+
+      // Check if this was their first time (should have login record but no first_login flag)
+      const hasLoggedInBefore = await this.isFirstTimeLogin(user.id);
+      if (hasLoggedInBefore) {
+        // This is still their first time and profile is now complete!
+        console.log('🎉 Sending postponed first-time login notification for:', user.name);
+        
+        // Send the first-time notification
+        await this.sendDiscordNotification(user, true);
+        
+        // Mark as recorded so we don't send again
+        this.markFirstLoginRecorded(user.id);
+        
+        console.log('✅ Postponed first-time login notification sent');
+      }
+    } catch (error) {
+      console.error('Error sending postponed notification:', error);
+      // Don't throw - this is non-critical
     }
   }
 }
