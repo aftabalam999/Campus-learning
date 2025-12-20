@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { DataCacheProvider } from './contexts/DataCacheContext';
 import { ClientReminderScheduler } from './services/clientReminderScheduler';
+import { AttendanceScheduler } from './services/attendanceScheduler';
 
 // Common Components
 import ProtectedRoute from './components/Common/ProtectedRoute';
@@ -56,15 +57,19 @@ const NotFound = () => (
 );
 
 function App() {
-  // Initialize the client-side reminder scheduler
+  // Initialize the client-side reminder scheduler and attendance scheduler
   useEffect(() => {
     console.log('[App] Initializing review reminder scheduler...');
     const scheduler = ClientReminderScheduler.getInstance();
     scheduler.start();
     
+    console.log('[App] Initializing attendance scheduler...');
+    AttendanceScheduler.startScheduler();
+    
     return () => {
-      // Cleanup if needed
-      console.log('[App] App unmounting');
+      // Cleanup schedulers
+      console.log('[App] App unmounting, stopping schedulers...');
+      AttendanceScheduler.stopScheduler();
     };
   }, []);
 

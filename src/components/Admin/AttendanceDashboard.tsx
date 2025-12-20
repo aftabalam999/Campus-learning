@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, CheckCircle, FileText, Calendar, UserCheck, Search } from 'lucide-react';
+import { Users, CheckCircle, FileText, Calendar, UserCheck, Search, Send } from 'lucide-react';
 import { AttendanceTrackingService, DailyAttendanceStats, MenteeInfo } from '../../services/attendanceTrackingService';
+import { AttendanceScheduler } from '../../services/attendanceScheduler';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AttendanceDashboardProps {
@@ -17,18 +18,19 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ className = '
   const [menteeSearchTerm, setMenteeSearchTerm] = useState('');
   const [showMentees, setShowMentees] = useState(false);
   const [loadingMentees, setLoadingMentees] = useState(false);
+  const [sendingReport, setSendingReport] = useState<string | null>(null);
 
   // Available campuses
   const campuses = [
     'all',
+    'Dharamshala',
     'Dantewada',
-    'Dharamshala', 
-    'Eternal',
     'Jashpur',
-    'Kishanganj',
-    'Pune',
     'Raigarh',
-    'Sarjapura'
+    'Pune',
+    'Sarjapur',
+    'Kishanganj',
+    'Eternal'
   ];
 
   // Set up real-time tracking
@@ -102,6 +104,24 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ className = '
 
   const handleCampusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCampus(event.target.value);
+  };
+
+  const handleSendDiscordReport = async (campus?: string) => {
+    try {
+      const campusKey = campus || 'all';
+      setSendingReport(campusKey);
+      
+      await AttendanceScheduler.triggerManualReport(
+        campus === 'all' ? undefined : campus
+      );
+      
+      alert(`✅ Attendance report sent to Discord for ${campus || 'All Campuses'}!`);
+    } catch (error) {
+      console.error('Error sending Discord report:', error);
+      alert(`❌ Failed to send report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSendingReport(null);
+    }
   };
 
   if (loading && !stats) {
@@ -259,6 +279,49 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ className = '
               </div>
             </div>
           )}
+
+          {/* Discord Report Buttons */}
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h4 className="text-sm font-medium text-gray-900 mb-4 flex items-center">
+              <Send className="mr-2 h-4 w-4" />
+              Send Attendance Report to Discord
+            </h4>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {/* All Campuses Button */}
+              <button
+                onClick={() => handleSendDiscordReport()}
+                disabled={sendingReport !== null}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                  sendingReport === 'all'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {sendingReport === 'all' ? 'Sending...' : 'All Campuses'}
+              </button>
+
+              {/* Campus-specific Buttons */}
+              {['Dharamshala', 'Dantewada', 'Jashpur', 'Raigarh', 'Pune', 'Sarjapur', 'Kishanganj', 'Eternal'].map((campus) => (
+                <button
+                  key={campus}
+                  onClick={() => handleSendDiscordReport(campus)}
+                  disabled={sendingReport !== null}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                    sendingReport === campus
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  {sendingReport === campus ? 'Sending...' : campus}
+                </button>
+              ))}
+            </div>
+
+            <p className="mt-3 text-xs text-gray-500">
+              💡 Attendance reports are automatically sent at 10:00 AM daily. Use these buttons to send reports manually.
+            </p>
+          </div>
         </div>
       </div>
 

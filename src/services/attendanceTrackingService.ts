@@ -18,10 +18,10 @@ export interface DailyAttendanceStats {
   totalActiveStudents: number;
   studentsWithApprovedGoals: number;
   studentsWithSubmittedReflections: number;
-  studentsPresent: number; // Approved goal + Submitted reflection
+  studentsPresent: number; // Students with approved goal (marked as present)
   goalApprovalRate: number; // Percentage of students with approved goals
   reflectionSubmissionRate: number; // Percentage of students with reflections
-  attendanceRate: number; // Percentage actually present
+  attendanceRate: number; // Percentage actually present (same as goalApprovalRate)
   studentsOnLeave: number;
 }
 
@@ -70,11 +70,8 @@ export class AttendanceTrackingService {
       );
       const studentsWithSubmittedReflections = new Set(submittedReflections.map(r => r.student_id)).size;
 
-      // Calculate who is actually present (both conditions met)
-      const studentsWithBoth = approvedGoals.filter(goal => 
-        submittedReflections.some(reflection => reflection.student_id === goal.student_id)
-      );
-      const studentsPresent = new Set(studentsWithBoth.map(g => g.student_id)).size;
+      // Calculate who is actually present (approved goal = present)
+      const studentsPresent = studentsWithApprovedGoals;
 
       // Calculate rates (excluding students on leave from denominators)
       const eligibleStudents = totalActiveStudents - studentsOnLeave.length;
@@ -131,7 +128,7 @@ export class AttendanceTrackingService {
       const hasApprovedGoal = goalMap.has(student.id);
       const hasSubmittedReflection = reflectionMap.has(student.id);
       const isOnLeave = leaveSet.has(student.id);
-      const isPresent = hasApprovedGoal && hasSubmittedReflection && !isOnLeave;
+      const isPresent = hasApprovedGoal && !isOnLeave; // Present if goal approved
 
       return {
         student,
