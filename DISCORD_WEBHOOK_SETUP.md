@@ -42,8 +42,9 @@ For each channel:
    - Channel: Verify correct channel
 7. **Copy Webhook URL** - It will look like:
    ```
-   https://discord.com/api/webhooks/1234567890123456789/AbCdEfGhIjKlMnOpQrStUvWxYz1234567890
+   https://discord.com/api/webhooks/[WEBHOOK_ID]/[WEBHOOK_TOKEN]
    ```
+   Example: `https://discord.com/api/webhooks/123456789012345678/aBcDeFgHiJkLmNoPqRsTuVwXyZ`
 8. **Save** the webhook
 
 ### 3. Update .env File
@@ -55,14 +56,14 @@ Open your `.env` file and replace the placeholder URLs:
 REACT_APP_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_GENERAL_WEBHOOK_URL
 
 # Campus-specific attendance webhooks
-REACT_APP_DISCORD_WEBHOOK_DHARAMSHALA=https://discord.com/api/webhooks/1234567890/AbCdEf...
-REACT_APP_DISCORD_WEBHOOK_DANTEWADA=https://discord.com/api/webhooks/1234567890/GhIjKl...
-REACT_APP_DISCORD_WEBHOOK_JASHPUR=https://discord.com/api/webhooks/1234567890/MnOpQr...
-REACT_APP_DISCORD_WEBHOOK_RAIGARH=https://discord.com/api/webhooks/1234567890/StUvWx...
-REACT_APP_DISCORD_WEBHOOK_PUNE=https://discord.com/api/webhooks/1234567890/YzAbCd...
-REACT_APP_DISCORD_WEBHOOK_SARJAPUR=https://discord.com/api/webhooks/1234567890/EfGhIj...
-REACT_APP_DISCORD_WEBHOOK_KISHANGANJ=https://discord.com/api/webhooks/1234567890/KlMnOp...
-REACT_APP_DISCORD_WEBHOOK_ETERNAL=https://discord.com/api/webhooks/1234567890/QrStUv...
+REACT_APP_DISCORD_WEBHOOK_DHARAMSHALA=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_DANTEWADA=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_JASHPUR=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_RAIGARH=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_PUNE=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_SARJAPUR=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_KISHANGANJ=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
+REACT_APP_DISCORD_WEBHOOK_ETERNAL=https://discord.com/api/webhooks/[YOUR_WEBHOOK_ID]/[YOUR_TOKEN]
 ```
 
 ⚠️ **Important:** 
