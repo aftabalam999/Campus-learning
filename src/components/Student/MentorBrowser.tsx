@@ -212,99 +212,104 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
   return (
     <div
       ref={modalRef}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={handleOutsideClick}
     >
       <div
         ref={contentRef}
-        className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
         onClick={handleContentClick}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-gray-900">Browse Mentors</h2>
+        <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Browse Mentors</h2>
             {hasPendingRequest && (
-              <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+              <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full whitespace-nowrap w-fit">
                 Change request pending
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         {success && (
-          <div className="mx-6 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <UserCheck className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">{success}</p>
+          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2 sm:gap-3">
+            <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-green-800">{success}</p>
           </div>
         )}
         {error && (
-          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mx-3 sm:mx-6 mt-3 sm:mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 sm:gap-3">
+            <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm text-red-800">{error}</p>
           </div>
         )}
-        <div className="px-6 pt-6 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search mentors by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Toggle filter options"
-          >
-            <Filter className="h-4 w-4" />
-            <span>Filters</span>
-          </button>
-          {showFilters && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Campus</label>
-                <select
-                  value={campusFilter}
-                  onChange={(e) => setCampusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="all">All Campuses</option>
-                  <option value="Dantewada">Dantewada</option>
-                  <option value="Dharamshala">Dharamshala</option>
-                  <option value="Eternal">Eternal</option>
-                  <option value="Jashpur">Jashpur</option>
-                  <option value="Kishanganj">Kishanganj</option>
-                  <option value="Pune">Pune</option>
-                  <option value="Raigarh">Raigarh</option>
-                  <option value="Sarjapura">Sarjapura</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">House</label>
-                <select
-                  value={houseFilter}
-                  onChange={(e) => setHouseFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="all">All Houses</option>
-                  <option value="Bageshree">Bageshree</option>
-                  <option value="Malhar">Malhar</option>
-                  <option value="Bhairav">Bhairav</option>
-                </select>
-              </div>
+        <div 
+          ref={listRef} 
+          className="flex-1 overflow-y-auto scroll-smooth" 
+          style={{ scrollBehavior: 'smooth' }}
+        >
+          <div className="px-3 sm:px-6 pt-3 sm:pt-6 space-y-3 sm:space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search mentors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
             </div>
-          )}
-        </div>
-        <div ref={listRef} className="flex-1 overflow-y-auto p-6" style={{ minHeight: 300 }}>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Toggle filter options"
+            >
+              <Filter className="h-4 w-4" />
+              <span>Filters</span>
+            </button>
+            {showFilters && (
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Campus</label>
+                  <select
+                    value={campusFilter}
+                    onChange={(e) => setCampusFilter(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="all">All Campuses</option>
+                    <option value="Dantewada">Dantewada</option>
+                    <option value="Dharamshala">Dharamshala</option>
+                    <option value="Eternal">Eternal</option>
+                    <option value="Jashpur">Jashpur</option>
+                    <option value="Kishanganj">Kishanganj</option>
+                    <option value="Pune">Pune</option>
+                    <option value="Raigarh">Raigarh</option>
+                    <option value="Sarjapura">Sarjapura</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">House</label>
+                  <select
+                    value={houseFilter}
+                    onChange={(e) => setHouseFilter(e.target.value)}
+                    className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="all">All Houses</option>
+                    <option value="Bageshree">Bageshree</option>
+                    <option value="Malhar">Malhar</option>
+                    <option value="Bhairav">Bhairav</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="px-3 sm:px-6 py-3 sm:py-6">
           {loading ? (
             <MentorListSkeleton />
           ) : error ? (
@@ -320,7 +325,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {visibleMentors.map((mentorInfo) => {
                   const isCurrentMentor = mentorInfo.mentor.id === currentMentorId;
                   const hasSlots = mentorInfo.available_slots > 0;
@@ -331,7 +336,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                   return (
                     <div
                       key={mentorInfo.mentor.id}
-                      className={`border rounded-lg p-4 transition-all ${
+                      className={`border rounded-lg p-3 sm:p-4 transition-all ${
                         isSelected
                           ? 'border-primary-500 bg-primary-50 shadow-md'
                           : isCurrentMentor
@@ -347,31 +352,31 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                       }}
                       title={hasSlots && !isCurrentMentor && !isOnLeave ? 'Click to select this mentor' : isCurrentMentor ? 'This is your current mentor' : !hasSlots ? 'No slots available' : 'Mentor is on leave'}
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{mentorInfo.mentor.name}</h3>
-                            <p className="text-sm text-gray-500">{mentorInfo.mentor.email}</p>
+                      <div className="space-y-2 sm:space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">{mentorInfo.mentor.name}</h3>
+                            <p className="text-xs sm:text-sm text-gray-500 truncate">{mentorInfo.mentor.email}</p>
                           </div>
                           {isCurrentMentor && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Current</span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full flex-shrink-0">Current</span>
                           )}
                         </div>
-                        <div className="space-y-1 text-sm text-gray-600">
+                        <div className="space-y-1 text-xs sm:text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Phase:</span>
-                            <span>{mentorInfo.mentor.current_phase_id || 'N/A'}</span>
+                            <span className="truncate">{mentorInfo.mentor.current_phase_id || 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Campus:</span>
-                            <span>{mentorInfo.mentor.campus}</span>
+                            <span className="truncate">{mentorInfo.mentor.campus}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">House:</span>
-                            <span>{mentorInfo.mentor.house}</span>
+                            <span className="truncate">{mentorInfo.mentor.house}</span>
                           </div>
                         </div>
-                        <div className={`flex items-center gap-2 text-sm ${
+                        <div className={`flex items-center gap-2 text-xs sm:text-sm ${
                           isOnLeave ? 'text-orange-600' : hasSlots ? 'text-green-600' : 'text-red-600'
                         }`}>
                           {isOnLeave ? (
@@ -397,30 +402,31 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
                 })}
               </div>
               {loadingMore && (
-                <div className="flex justify-center items-center py-4 mt-4">
-                  <Loader className="h-6 w-6 animate-spin text-primary-500" />
-                  <span className="ml-2 text-gray-500 text-sm">Loading more mentors...</span>
+                <div className="flex justify-center items-center py-3 sm:py-4 mt-3 sm:mt-4">
+                  <Loader className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary-500" />
+                  <span className="ml-2 text-gray-500 text-xs sm:text-sm">Loading more...</span>
                 </div>
               )}
             </>
           )}
+          </div>
         </div>
         {selectedMentor && (
-          <div className="border-t px-6 py-4 space-y-4 bg-gray-50">
+          <div className="flex-shrink-0 border-t px-3 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4 bg-gray-50">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for mentor change request</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Reason for mentor change request</label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Please explain why you want to change your mentor..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-2 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 title="Close mentor request dialog"
               >
                 Cancel
@@ -428,7 +434,7 @@ const MentorBrowser: React.FC<MentorBrowserProps> = ({
               <button
                 onClick={handleRequestMentor}
                 disabled={submitting || !reason.trim()}
-                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm sm:text-base bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Send mentor request to selected mentor"
               >
                 {submitting ? 'Submitting...' : 'Submit Request'}
