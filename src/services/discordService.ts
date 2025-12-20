@@ -24,8 +24,17 @@ export interface AttendanceSummary {
 }
 
 export class DiscordService {
-  // Webhook URL should be configured in .env as VITE_DISCORD_WEBHOOK_URL
+  // Webhook URLs for different purposes
   private static WEBHOOK_URL = process.env.REACT_APP_DISCORD_WEBHOOK_URL || '';
+  private static WEBHOOK_DHARAMSHALA = process.env.REACT_APP_DISCORD_WEBHOOK_DHARAMSHALA || '';
+  private static WEBHOOK_DANTEWADA = process.env.REACT_APP_DISCORD_WEBHOOK_DANTEWADA || '';
+  private static WEBHOOK_JASHPUR = process.env.REACT_APP_DISCORD_WEBHOOK_JASHPUR || '';
+  private static WEBHOOK_RAIGARH = process.env.REACT_APP_DISCORD_WEBHOOK_RAIGARH || '';
+  private static WEBHOOK_PUNE = process.env.REACT_APP_DISCORD_WEBHOOK_PUNE || '';
+  private static WEBHOOK_SARJAPUR = process.env.REACT_APP_DISCORD_WEBHOOK_SARJAPUR || '';
+  private static WEBHOOK_KISHANGANJ = process.env.REACT_APP_DISCORD_WEBHOOK_KISHANGANJ || '';
+  private static WEBHOOK_ETERNAL = process.env.REACT_APP_DISCORD_WEBHOOK_ETERNAL || '';
+  
   private static RATE_LIMIT_DELAY = 2000; // 2 seconds between requests (safe: 30/min limit)
   private static lastRequestTime = 0;
 
@@ -45,18 +54,34 @@ export class DiscordService {
   }
 
   /**
+   * Validate if a webhook URL is properly configured
+   */
+  private static isValidWebhookUrl(url: string): boolean {
+    if (!url) return false;
+    if (url.includes('YOUR_') || url.includes('WEBHOOK_URL')) return false;
+    return url.startsWith('https://discord.com/api/webhooks/');
+  }
+
+  /**
    * Send a message to Discord webhook
    */
-  private static async sendWebhook(payload: any): Promise<void> {
-    if (!this.WEBHOOK_URL) {
-      console.warn('Discord webhook URL not configured');
-      return;
+  private static async sendWebhook(payload: any, webhookUrl?: string): Promise<void> {
+    const url = webhookUrl || this.WEBHOOK_URL;
+    
+    if (!url) {
+      console.warn('⚠️ Discord webhook URL not configured');
+      throw new Error('Discord webhook URL not configured. Please set up webhook URLs in .env file.');
+    }
+
+    if (!this.isValidWebhookUrl(url)) {
+      console.error('⚠️ Invalid Discord webhook URL:', url);
+      throw new Error('Invalid Discord webhook URL. Please replace placeholder URLs in .env with actual Discord webhook URLs. See README for instructions.');
     }
 
     try {
       await this.rateLimit();
 
-      const response = await fetch(this.WEBHOOK_URL, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +90,8 @@ export class DiscordService {
       });
 
       if (!response.ok) {
-        throw new Error(`Discord API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Discord API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       console.log('✅ Discord webhook sent successfully');
@@ -337,5 +363,142 @@ export class DiscordService {
       console.error('Discord webhook test failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Get webhook URL for a specific campus
+   */
+  private static getCampusWebhook(campus: string): string {
+    const campusLower = campus.toLowerCase();
+    switch (campusLower) {
+      case 'dharamshala':
+        return this.WEBHOOK_DHARAMSHALA || this.WEBHOOK_URL;
+      case 'dantewada':
+        return this.WEBHOOK_DANTEWADA || this.WEBHOOK_URL;
+      case 'jashpur':
+        return this.WEBHOOK_JASHPUR || this.WEBHOOK_URL;
+      case 'raigarh':
+        return this.WEBHOOK_RAIGARH || this.WEBHOOK_URL;
+      case 'pune':
+        return this.WEBHOOK_PUNE || this.WEBHOOK_URL;
+      case 'sarjapur':
+      case 'sarjapura':
+        return this.WEBHOOK_SARJAPUR || this.WEBHOOK_URL;
+      case 'kishanganj':
+        return this.WEBHOOK_KISHANGANJ || this.WEBHOOK_URL;
+      case 'eternal':
+        return this.WEBHOOK_ETERNAL || this.WEBHOOK_URL;
+      default:
+        return this.WEBHOOK_URL;
+    }
+  }
+
+  /**
+   * Send morning attendance report
+   * Called at 10:00 AM daily or triggered manually
+   */
+  static async sendAttendanceReport(
+    date: Date,
+    totalStudents: number,
+    presentStudents: number,
+    absentStudents: number,
+    attendanceRate: number,
+    studentsOnLeave: number,
+    absentStudentsList: string[],
+    campus?: string
+  ): Promise<void> {
+    const webhookUrl = campus ? this.getCampusWebhook(campus) : this.WEBHOOK_URL;
+    
+    const dateStr = date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    const absentList = absentStudentsList.length > 0 
+      ? absentStudentsList.slice(0, 50).join(', ') 
+      : 'None';
+    
+    const moreAbsent = absentStudentsList.length > 50 
+      ? `\n_...and ${absentStudentsList.length - 50} more_` 
+      : '';
+
+    // Choose color based on attendance rate
+    let color: number;
+    if (attendanceRate >= 80) {
+      color = 0x10b981; // Green - Good
+    } else if (attendanceRate >= 60) {
+      color = 0xf59e0b; // Amber - Warning
+    } else {
+      color = 0xef4444; // Red - Critical
+    }
+
+    const campusText = campus ? ` - ${campus}` : '';
+
+    const embed = {
+      title: `🌅 Morning Attendance${campusText}`,
+      description: `Attendance report for ${dateStr}`,
+      color,
+      fields: [
+        {
+          name: '✅ Present',
+          value: `${presentStudents} students`,
+          inline: false,
+        },
+        {
+          name: '❌ Absent',
+          value: `${absentStudents} students`,
+          inline: false,
+        },
+        {
+          name: '🏖️ On Leave',
+          value: `${studentsOnLeave} students`,
+          inline: false,
+        },
+        {
+          name: '📈 Attendance Rate',
+          value: `${attendanceRate.toFixed(1)}%`,
+          inline: false,
+        },
+        {
+          name: '👥 Absent Students',
+          value: absentList + moreAbsent,
+          inline: false,
+        },
+      ],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Campus Learning Dashboard - Daily Report',
+      },
+    };
+
+    await this.sendWebhook({
+      embeds: [embed],
+    }, webhookUrl);
+  }
+
+  /**
+   * Send attendance report for a specific campus
+   */
+  static async sendCampusAttendanceReport(
+    campus: string,
+    date: Date,
+    totalStudents: number,
+    presentStudents: number,
+    absentStudents: number,
+    attendanceRate: number,
+    studentsOnLeave: number,
+    absentStudentsList: string[]
+  ): Promise<void> {
+    await this.sendAttendanceReport(
+      date,
+      totalStudents,
+      presentStudents,
+      absentStudents,
+      attendanceRate,
+      studentsOnLeave,
+      absentStudentsList,
+      campus
+    );
   }
 }
