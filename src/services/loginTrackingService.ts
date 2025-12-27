@@ -154,12 +154,17 @@ export class LoginTrackingService {
   }
 
   /**
-   * Send Discord notification for login
-   * Detects and sends special notification for first-time logins
+   * Send Discord notification for first-time login only
    */
   private static async sendDiscordNotification(user: User, isFirstTime: boolean = false): Promise<void> {
     if (!this.DISCORD_NOTIFICATIONS_ENABLED) {
       console.log('Discord notifications disabled, skipping');
+      return;
+    }
+
+    // Only send notification for first-time logins
+    if (!isFirstTime) {
+      console.log('Regular login - no notification sent');
       return;
     }
 
@@ -174,13 +179,8 @@ export class LoginTrackingService {
         campus_joining_date: user.campus_joining_date,
       };
 
-      if (isFirstTime) {
-        await DiscordService.sendFirstTimeLoginNotification(discordUser);
-        console.log('🎉 First-time login Discord notification sent');
-      } else {
-        await DiscordService.sendLoginNotification(discordUser);
-        console.log('✅ Discord notification sent');
-      }
+      await DiscordService.sendFirstTimeLoginNotification(discordUser);
+      console.log('🎉 First-time login Discord notification sent');
     } catch (error) {
       // Don't throw - Discord notifications are non-critical
       console.error('❌ Failed to send Discord notification:', error);
