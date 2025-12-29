@@ -319,11 +319,12 @@ export class AttendanceTrackingService {
       const snapshot = await getDocs(studentsQuery);
       let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 
-      // Filter by status and campus
+      // Filter by status, campus, and role (exclude admin and academic_associate)
       students = students.filter(student => {
         const isActive = !student.status || student.status === 'active';
         const matchesCampus = !campus || student.campus === campus;
-        return isActive && matchesCampus;
+        const isNotAdminRole = student.role !== 'admin' && student.role !== 'academic_associate';
+        return isActive && matchesCampus && isNotAdminRole;
       });
 
       return students;
