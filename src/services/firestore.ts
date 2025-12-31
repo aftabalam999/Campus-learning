@@ -413,9 +413,12 @@ export class UserService extends FirestoreService {
   }
 
   static async updateUser(id: string, userData: Partial<User>): Promise<void> {
+    console.log(`[UserService.updateUser] Updating user ${id} with data:`, userData);
     await this.update<User>(COLLECTIONS.USERS, id, userData);
+    console.log(`[UserService.updateUser] Update successful for user ${id}`);
     // Invalidate user-related caches
     queryCache.invalidatePattern('users');
+    queryCache.invalidate(`users:id:${id}`);
   }
 
   static async assignMentorToStudent(studentId: string, mentorId: string): Promise<void> {

@@ -39,6 +39,36 @@ service cloud.firestore {
         (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected');
     }
 
+    // Leave management rules
+    match /leaves/{leaveId} {
+      // Users can read their own leaves, admin/AA can read all
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isAdminOrAA()
+      );
+      // Users can create their own leave requests
+      allow create: if isAuthenticated() && 
+        request.resource.data.user_id == request.auth.uid &&
+        (request.resource.data.status == 'pending' || 
+         (request.resource.data.leave_type == 'kitchen_leave' && request.resource.data.status == 'approved'));
+      // Admin/AA can update leave status (approve/reject)
+      // System can update expired leaves
+      allow update: if isAdminOrAA() ||
+        (isAuthenticated() && resource.data.user_id == request.auth.uid);
+    }
+
+    // Notification rules
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && 
+        resource.data.user_id == request.auth.uid;
+      // System can create notifications for any user
+      allow create: if isAuthenticated();
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        resource.data.user_id == request.auth.uid;
+    }
+
     // Collections that need user document existence check
     match /{collection}/{document=**} {
       allow read: if isAuthenticated() && 

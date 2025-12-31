@@ -916,7 +916,7 @@ export class AdminService extends FirestoreService {
   }
 
   // Update user status
-  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave'): Promise<void> {
+  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave'): Promise<void> {
     try {
       return await this.update<any>(COLLECTIONS.USERS, userId, { 
         status,

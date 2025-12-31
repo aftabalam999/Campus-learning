@@ -20,7 +20,8 @@ import {
   Building,
   AlertCircle,
   Sparkles,
-  Code
+  Code,
+  CalendarClock
 } from 'lucide-react';
 
 import BugFeatureModal from './BugFeatureModal';
@@ -101,6 +102,12 @@ export default function Navigation() {
       mobileLabel: 'Reviews',
       path: '/reviews',
       icon: UserCircle
+    },
+    {
+      label: 'Leave',
+      mobileLabel: 'Leave',
+      path: '/leave',
+      icon: CalendarClock
     },
     {
       label: 'Pair Programming',

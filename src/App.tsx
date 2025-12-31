@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { DataCacheProvider } from './contexts/DataCacheContext';
 import { ClientReminderScheduler } from './services/clientReminderScheduler';
 import { AttendanceScheduler } from './services/attendanceScheduler';
+import { LeaveScheduler } from './services/leaveScheduler';
 
 // Common Components
 import ProtectedRoute from './components/Common/ProtectedRoute';
@@ -35,6 +36,10 @@ import Leaderboard from './components/PairProgramming/Leaderboard';
 // Admin Components
 import AdminDashboard from './components/Admin/AdminDashboard';
 
+// Leave Management Components
+import UserLeaveWrapper from './components/Leave/UserLeaveWrapper';
+import AdminLeaveWrapper from './components/Leave/AdminLeaveWrapper';
+
 // Error Components
 const Unauthorized = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -57,7 +62,7 @@ const NotFound = () => (
 );
 
 function App() {
-  // Initialize the client-side reminder scheduler and attendance scheduler
+  // Initialize the client-side reminder scheduler, attendance scheduler, and leave scheduler
   useEffect(() => {
     console.log('[App] Initializing review reminder scheduler...');
     const scheduler = ClientReminderScheduler.getInstance();
@@ -66,10 +71,14 @@ function App() {
     console.log('[App] Initializing attendance scheduler...');
     AttendanceScheduler.startScheduler();
     
+    console.log('[App] Initializing leave scheduler...');
+    LeaveScheduler.start();
+    
     return () => {
       // Cleanup schedulers
       console.log('[App] App unmounting, stopping schedulers...');
       AttendanceScheduler.stopScheduler();
+      LeaveScheduler.stop();
     };
   }, []);
 
@@ -216,6 +225,23 @@ function App() {
             <Route path="/admin/dashboard" element={
               <ProtectedRoute requireAdmin={true}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Leave Management Routes */}
+            <Route path="/leave" element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserLeaveWrapper />
+                </Layout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/leave-management" element={
+              <ProtectedRoute requireAdmin={true}>
+                <Layout>
+                  <AdminLeaveWrapper />
+                </Layout>
               </ProtectedRoute>
             } />
 

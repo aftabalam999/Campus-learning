@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { WebhookService } from '../../services/webhookService';
+import { GenericNotificationService } from '../../services/genericNotificationService';
 import { useAuth } from '../../contexts/AuthContext';
 import WebhookNotificationPanel from './WebhookNotificationPanel';
 
@@ -22,8 +22,17 @@ const WebhookNotificationBell: React.FC = () => {
     if (!userData?.id) return;
 
     try {
-      const notifications = await WebhookService.getUnreadNotifications(userData.id);
-      setUnreadCount(notifications.length);
+      let count = 0;
+
+      // If user is admin or academic associate, get admin notifications
+      if (userData.role === 'admin' || userData.role === 'academic_associate') {
+        count = await GenericNotificationService.getUnreadCountForAdmin(userData.id);
+      } else {
+        // Regular users get their personal notifications
+        count = await GenericNotificationService.getUnreadCountForUser(userData.id);
+      }
+
+      setUnreadCount(count);
     } catch (err) {
       console.error('Error loading unread count:', err);
     }
@@ -43,7 +52,7 @@ const WebhookNotificationBell: React.FC = () => {
       <button
         onClick={handleBellClick}
         className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        title="Webhook Notifications"
+        title="Notifications"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Check, Loader, Webhook, AlertCircle } from 'lucide-react';
-import { WebhookService } from '../../services/webhookService';
-import { WebhookChangeNotification } from '../../types';
+import { Bell, X, Check, Loader, Webhook, AlertCircle, FileText, UserCheck, UserX, Clock } from 'lucide-react';
+import { GenericNotificationService, GenericNotification } from '../../services/genericNotificationService';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface WebhookNotificationPanelProps {
@@ -11,7 +10,7 @@ interface WebhookNotificationPanelProps {
 
 const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isOpen, onClose }) => {
   const { userData } = useAuth();
-  const [notifications, setNotifications] = useState<WebhookChangeNotification[]>([]);
+  const [notifications, setNotifications] = useState<GenericNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,9 +21,20 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
   }, [isOpen]);
 
   const loadNotifications = async () => {
+    if (!userData?.id) return;
+    
     try {
       setLoading(true);
-      const allNotifications = await WebhookService.getAllNotifications(50);
+      
+      let allNotifications: GenericNotification[];
+      
+      // Load admin or user notifications based on role
+      if (userData.role === 'admin' || userData.role === 'academic_associate') {
+        allNotifications = await GenericNotificationService.getAllAdminNotifications(50);
+      } else {
+        allNotifications = await GenericNotificationService.getUserNotifications(userData.id, 50);
+      }
+      
       setNotifications(allNotifications);
     } catch (err) {
       console.error('Error loading notifications:', err);
@@ -34,11 +44,11 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
     }
   };
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string, notificationType: GenericNotification['type']) => {
     if (!userData?.id) return;
 
     try {
-      await WebhookService.markNotificationAsRead(notificationId, userData.id);
+      await GenericNotificationService.markAsRead(notificationId, userData.id, notificationType);
       await loadNotifications();
     } catch (err) {
       console.error('Error marking notification as read:', err);
@@ -49,7 +59,12 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
     if (!userData?.id) return;
 
     try {
-      await WebhookService.markAllNotificationsAsRead(userData.id);
+      // Mark all notifications as read
+      for (const notification of notifications) {
+        if (!isNotificationRead(notification)) {
+          await GenericNotificationService.markAsRead(notification.id, userData.id, notification.type);
+        }
+      }
       await loadNotifications();
     } catch (err) {
       console.error('Error marking all notifications as read:', err);
@@ -63,34 +78,83 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
     ).length;
   };
 
-  const isNotificationRead = (notification: WebhookChangeNotification) => {
+  const isNotificationRead = (notification: GenericNotification) => {
     if (!userData?.id) return false;
     return notification.read_by && notification.read_by.includes(userData.id);
   };
 
-  const getChangeTypeColor = (changeType: string) => {
-    switch (changeType) {
-      case 'created':
-        return 'bg-green-100 text-green-800';
-      case 'updated':
+  const getNotificationIcon = (type: GenericNotification['type']) => {
+    switch (type) {
+      case 'webhook_change':
+        return <Webhook className="h-5 w-5" />;
+      case 'leave_requested':
+        return <Bell className="h-5 w-5" />;
+      case 'leave_approved':
+        return <UserCheck className="h-5 w-5" />;
+      case 'leave_rejected':
+        return <UserX className="h-5 w-5" />;
+      case 'leave_expired':
+      case 'leave_expired_admin':
+        return <Clock className="h-5 w-5" />;
+      default:
+        return <FileText className="h-5 w-5" />;
+    }
+  };
+
+  const getNotificationColor = (type: GenericNotification['type'], isRead: boolean) => {
+    if (isRead) return 'text-gray-400';
+    
+    switch (type) {
+      case 'webhook_change':
+        return 'text-purple-600';
+      case 'leave_requested':
+        return 'text-blue-600';
+      case 'leave_approved':
+        return 'text-green-600';
+      case 'leave_rejected':
+        return 'text-red-600';
+      case 'leave_expired':
+      case 'leave_expired_admin':
+        return 'text-orange-600';
+      default:
+        return 'text-primary-600';
+    }
+  };
+
+  const getNotificationBadgeColor = (type: GenericNotification['type']) => {
+    switch (type) {
+      case 'webhook_change':
+        return 'bg-purple-100 text-purple-800';
+      case 'leave_requested':
         return 'bg-blue-100 text-blue-800';
-      case 'deleted':
+      case 'leave_approved':
+        return 'bg-green-100 text-green-800';
+      case 'leave_rejected':
         return 'bg-red-100 text-red-800';
+      case 'leave_expired':
+      case 'leave_expired_admin':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getChangeTypeLabel = (changeType: string) => {
-    switch (changeType) {
-      case 'created':
-        return 'Created';
-      case 'updated':
-        return 'Updated';
-      case 'deleted':
-        return 'Deleted';
+  const getNotificationTypeLabel = (type: GenericNotification['type']) => {
+    switch (type) {
+      case 'webhook_change':
+        return 'Webhook';
+      case 'leave_requested':
+        return 'Leave Request';
+      case 'leave_approved':
+        return 'Leave Approved';
+      case 'leave_rejected':
+        return 'Leave Rejected';
+      case 'leave_expired':
+        return 'Leave Expired';
+      case 'leave_expired_admin':
+        return 'Leave Expired';
       default:
-        return changeType;
+        return 'Notification';
     }
   };
 
@@ -111,7 +175,7 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">Webhook Notifications</h2>
+              <h2 className="text-lg font-semibold">Notifications</h2>
             </div>
             <button
               onClick={onClose}
@@ -154,74 +218,79 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Bell className="h-12 w-12 text-gray-300 mb-3" />
-              <p className="text-gray-500 text-center">No webhook notifications yet</p>
+              <p className="text-gray-500 text-center">No notifications yet</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {notifications.map(notification => (
-                <div
-                  key={notification.id}
-                  className={`p-4 transition-colors ${
-                    isNotificationRead(notification)
-                      ? 'bg-white'
-                      : 'bg-blue-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Webhook className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                      isNotificationRead(notification) ? 'text-gray-400' : 'text-primary-600'
-                    }`} />
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1">
-                          <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
-                            getChangeTypeColor(notification.change_type)
-                          }`}>
-                            {getChangeTypeLabel(notification.change_type)}
-                          </span>
-                        </div>
-                        {!isNotificationRead(notification) && (
-                          <button
-                            onClick={() => handleMarkAsRead(notification.id)}
-                            className="p-1 hover:bg-gray-200 rounded transition-colors"
-                            title="Mark as read"
-                          >
-                            <Check className="h-4 w-4 text-gray-600" />
-                          </button>
-                        )}
+              {notifications.map(notification => {
+                const isRead = isNotificationRead(notification);
+                
+                return (
+                  <div
+                    key={notification.id}
+                    className={`p-4 transition-colors ${
+                      isRead ? 'bg-white' : 'bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`flex-shrink-0 mt-0.5 ${getNotificationColor(notification.type, isRead)}`}>
+                        {getNotificationIcon(notification.type)}
                       </div>
-
-                      <p className={`text-sm mb-2 ${
-                        isNotificationRead(notification) ? 'text-gray-600' : 'text-gray-900 font-medium'
-                      }`}>
-                        <span className="font-semibold">{notification.changed_by_name}</span> {notification.change_type} webhook URL for{' '}
-                        <span className="font-semibold">{notification.campus}</span>
-                      </p>
-
-                      {notification.old_webhook_url && (
-                        <div className="mb-2">
-                          <p className="text-xs text-gray-500 mb-1">Previous URL:</p>
-                          <p className="text-xs text-gray-600 bg-gray-100 rounded p-2 break-all">
-                            {notification.old_webhook_url}
-                          </p>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1">
+                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                              getNotificationBadgeColor(notification.type)
+                            }`}>
+                              {getNotificationTypeLabel(notification.type)}
+                            </span>
+                          </div>
+                          {!isRead && (
+                            <button
+                              onClick={() => handleMarkAsRead(notification.id, notification.type)}
+                              className="p-1 hover:bg-gray-200 rounded transition-colors"
+                              title="Mark as read"
+                            >
+                              <Check className="h-4 w-4 text-gray-600" />
+                            </button>
+                          )}
                         </div>
-                      )}
 
-                      <div className="mb-2">
-                        <p className="text-xs text-gray-500 mb-1">New URL:</p>
-                        <p className="text-xs text-gray-600 bg-gray-100 rounded p-2 break-all">
-                          {notification.new_webhook_url}
+                        <p className={`text-sm mb-2 ${
+                          isRead ? 'text-gray-600' : 'text-gray-900 font-medium'
+                        }`}>
+                          {notification.title}
+                        </p>
+
+                        <p className={`text-sm mb-2 ${
+                          isRead ? 'text-gray-500' : 'text-gray-700'
+                        }`}>
+                          {notification.message}
+                        </p>
+
+                        {/* Show webhook-specific details */}
+                        {notification.type === 'webhook_change' && notification.related_data && (
+                          <>
+                            {notification.related_data.old_webhook_url && (
+                              <div className="mb-2">
+                                <p className="text-xs text-gray-500 mb-1">Previous URL:</p>
+                                <p className="text-xs text-gray-600 bg-gray-100 rounded p-2 break-all">
+                                  {notification.related_data.old_webhook_url}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        <p className="text-xs text-gray-400">
+                          {new Date(notification.timestamp).toLocaleString()}
                         </p>
                       </div>
-
-                      <p className="text-xs text-gray-400">
-                        {new Date(notification.timestamp).toLocaleString()}
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,3 +1,25 @@
+// Leave interface
+export interface Leave {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  leave_type: 'kitchen_leave' | 'on_leave';
+  start_date: Date;
+  end_date: Date;
+  reason?: string; // Mandatory for on_leave, optional for kitchen_leave
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  approved_by?: string; // User ID of admin/academic associate who approved
+  approved_by_name?: string;
+  approved_at?: Date;
+  rejected_by?: string;
+  rejected_by_name?: string;
+  rejected_at?: Date;
+  rejection_reason?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // User interface
 export interface User {
   id: string;
@@ -15,7 +37,7 @@ export interface User {
   campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura' | 'Bageshree' | 'Malhar' | 'Bhairav';  // User's campus or house
   current_phase_id?: string;  // Current phase the user is on
   current_phase_name?: string;  // Denormalized phase name for display
-  status?: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave';  // User's current status
+  status?: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave';  // User's current status
   leave_from?: Date;  // Start date of leave period
   leave_to?: Date;    // End date of leave period
   campus_joining_date?: Date; // Date when student joined the campus
@@ -627,7 +649,7 @@ export interface CalendarEvent {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'session_reminder' | 'session_assigned' | 'session_cancelled' | 'feedback_due' | 'leave_approved' | 'welcome_back' | 'session_reassigned';
+  type: 'session_reminder' | 'session_assigned' | 'session_cancelled' | 'feedback_due' | 'leave_requested' | 'leave_approved' | 'leave_rejected' | 'leave_expired' | 'leave_expired_admin' | 'welcome_back' | 'session_reassigned';
   title: string;
   message: string;
   is_read: boolean;

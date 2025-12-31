@@ -20,6 +20,7 @@ import AdminReviewCompliance from './AdminReviewCompliance';
 import PhaseApprovalManagement from './PhaseApprovalManagement';
 import CampusWebhookManagement from './CampusWebhookManagement';
 import WebhookNotificationBell from './WebhookNotificationBell';
+import AdminLeaveManagement from '../Leave/AdminLeaveManagement';
 
 
 const AdminDashboard: React.FC = () => {
@@ -54,6 +55,7 @@ const AdminDashboard: React.FC = () => {
       { id: 'mentors', label: 'Mentor Management' },
       { id: 'super-mentors', label: 'Super Mentors' },
       { id: 'phase-approvals', label: 'Phase Approvals' },
+      { id: 'leave-management', label: 'Leave Management' },
     ],
     reports: [
       { id: 'reports', label: 'Overview' },
@@ -192,6 +194,14 @@ const AdminDashboard: React.FC = () => {
         {mainTab === 'user-management' && subTab === 'phase-approvals' && (
           <div className="p-6">
             <PhaseApprovalManagement />
+          </div>
+        )}
+        {mainTab === 'user-management' && subTab === 'leave-management' && (
+          <div className="p-6">
+            <AdminLeaveManagement 
+              adminId={userData?.id || ''} 
+              adminName={userData?.name || userData?.display_name || 'Admin'} 
+            />
           </div>
         )}
         {mainTab === 'reports' && subTab === 'reports' && (
