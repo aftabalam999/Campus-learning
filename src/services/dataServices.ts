@@ -1015,12 +1015,13 @@ export class AdminService extends FirestoreService {
     }
   }
 
-  // Get potential mentors (students who can mentor others)
+  // Get potential mentors (students, admins, and academic associates who can mentor others)
   static async getPotentialMentors(): Promise<any[]> {
     try {
       const allUsers = await this.getAllUsers();
-      // Return all non-admin users who could potentially be mentors
-      return allUsers.filter(user => !user.isAdmin);
+      // Return all users including admins and academic associates
+      // Everyone can potentially be a mentor now
+      return allUsers;
     } catch (error) {
       console.error('Error getting potential mentors:', error);
       throw error;
