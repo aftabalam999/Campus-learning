@@ -127,6 +127,37 @@ export class AttendanceScheduler {
         .filter(status => status.isOnLeave && status.leaveType === 'on_leave')
         .map(status => status.student.name || status.student.email || 'Unknown');
 
+      // Get students on unapproved leave
+      const unapprovedLeaveStudents = studentStatusList
+        .filter(status => status.isOnLeave && status.leaveType === 'unapproved_leave')
+        .map(status => status.student.name || status.student.email || 'Unknown');
+
+      // Get unapproved leave details with start dates
+      const unapprovedLeaveDetails = studentStatusList
+        .filter(status => status.isOnLeave && status.leaveType === 'unapproved_leave')
+        .map(status => {
+          let startDate = 'Unknown';
+          if (status.student.unapproved_leave_start) {
+            try {
+              // Handle both Date objects and Firestore Timestamps
+              const dateObj = status.student.unapproved_leave_start instanceof Date 
+                ? status.student.unapproved_leave_start
+                : (status.student.unapproved_leave_start as any).toDate 
+                  ? (status.student.unapproved_leave_start as any).toDate()
+                  : new Date(status.student.unapproved_leave_start);
+              
+              startDate = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (error) {
+              console.error('Error parsing unapproved_leave_start date:', error);
+              startDate = 'Unknown';
+            }
+          }
+          return {
+            name: status.student.name || status.student.email || 'Unknown',
+            startDate
+          };
+        });
+
       const totalStudents = stats.totalActiveStudents;
       const presentStudents = stats.studentsPresent;
       const absentCount = totalStudents - presentStudents - stats.studentsOnLeave;
@@ -142,9 +173,12 @@ export class AttendanceScheduler {
           stats.attendanceRate,
           stats.studentsOnKitchenLeave,
           stats.studentsOnRegularLeave,
+          stats.studentsOnUnapprovedLeave,
           absentStudents,
           kitchenLeaveStudents,
-          regularLeaveStudents
+          regularLeaveStudents,
+          unapprovedLeaveStudents,
+          unapprovedLeaveDetails
         );
       } else {
         await DiscordService.sendAttendanceReport(
@@ -155,9 +189,12 @@ export class AttendanceScheduler {
           stats.attendanceRate,
           stats.studentsOnKitchenLeave,
           stats.studentsOnRegularLeave,
+          stats.studentsOnUnapprovedLeave,
           absentStudents,
           kitchenLeaveStudents,
-          regularLeaveStudents
+          regularLeaveStudents,
+          unapprovedLeaveStudents,
+          unapprovedLeaveDetails
         );
       }
 

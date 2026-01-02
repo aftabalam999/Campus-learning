@@ -916,12 +916,22 @@ export class AdminService extends FirestoreService {
   }
 
   // Update user status
-  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave'): Promise<void> {
+  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave' | 'unapproved_leave'): Promise<void> {
     try {
-      return await this.update<any>(COLLECTIONS.USERS, userId, { 
+      const updateData: any = { 
         status,
         updated_at: new Date()
-      });
+      };
+      
+      // If changing to unapproved_leave, record the date
+      if (status === 'unapproved_leave') {
+        updateData.unapproved_leave_start = new Date();
+      } else {
+        // Clear unapproved_leave_start when changing to any other status
+        updateData.unapproved_leave_start = null;
+      }
+      
+      return await this.update<any>(COLLECTIONS.USERS, userId, updateData);
     } catch (error) {
       console.error('Error updating user status:', error);
       throw error;

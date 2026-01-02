@@ -25,6 +25,7 @@ export interface DailyAttendanceStats {
   studentsOnLeave: number;
   studentsOnKitchenLeave: number; // Students on kitchen leave
   studentsOnRegularLeave: number; // Students on regular leave
+  studentsOnUnapprovedLeave: number; // Students on unapproved leave
 }
 
 export interface StudentDailyStatus {
@@ -33,7 +34,7 @@ export interface StudentDailyStatus {
   hasSubmittedReflection: boolean;
   isPresent: boolean;
   isOnLeave: boolean;
-  leaveType?: 'kitchen_leave' | 'on_leave'; // Type of leave if on leave
+  leaveType?: 'kitchen_leave' | 'on_leave' | 'unapproved_leave'; // Type of leave if on leave
   goalDetails?: DailyGoal;
   reflectionDetails?: DailyReflection;
 }
@@ -59,23 +60,27 @@ export class AttendanceTrackingService {
       // Get students on approved leave for this date (with leave type)
       const studentsOnLeaveData = await this.getStudentsOnLeaveWithType(activeStudents.map(s => s.id), date);
       
-      // Also check for students with status set to kitchen_leave or on_leave
+      // Also check for students with status set to kitchen_leave, on_leave, or unapproved_leave
       const studentsWithLeaveStatus = activeStudents.filter(s => 
-        s.status === 'kitchen_leave' || s.status === 'on_leave'
+        s.status === 'kitchen_leave' || s.status === 'on_leave' || s.status === 'unapproved_leave'
       );
       
       // Combine leave requests and status-based leaves
-      const leaveMap = new Map<string, 'kitchen_leave' | 'on_leave'>();
+      // Priority: User's current status takes precedence over leave records
+      const leaveMap = new Map<string, 'kitchen_leave' | 'on_leave' | 'unapproved_leave'>();
+      
+      // First, add leave records
       studentsOnLeaveData.forEach(l => leaveMap.set(l.studentId, l.leaveType));
+      
+      // Then, override with current user status (status is the source of truth)
       studentsWithLeaveStatus.forEach(s => {
-        if (!leaveMap.has(s.id)) {
-          leaveMap.set(s.id, s.status as 'kitchen_leave' | 'on_leave');
-        }
+        leaveMap.set(s.id, s.status as 'kitchen_leave' | 'on_leave' | 'unapproved_leave');
       });
       
       const studentsOnLeave = leaveMap.size;
       const studentsOnKitchenLeave = Array.from(leaveMap.values()).filter(t => t === 'kitchen_leave').length;
       const studentsOnRegularLeave = Array.from(leaveMap.values()).filter(t => t === 'on_leave').length;
+      const studentsOnUnapprovedLeave = Array.from(leaveMap.values()).filter(t => t === 'unapproved_leave').length;
 
       // Get approved goals for the date
       const approvedGoals = await this.getApprovedGoalsForDate(
@@ -108,7 +113,8 @@ export class AttendanceTrackingService {
         attendanceRate: eligibleStudents > 0 ? (studentsPresent / eligibleStudents) * 100 : 0,
         studentsOnLeave,
         studentsOnKitchenLeave,
-        studentsOnRegularLeave
+        studentsOnRegularLeave,
+        studentsOnUnapprovedLeave
       };
     } catch (error) {
       console.error('Error fetching daily attendance stats:', error);
@@ -123,7 +129,8 @@ export class AttendanceTrackingService {
         attendanceRate: 0,
         studentsOnLeave: 0,
         studentsOnKitchenLeave: 0,
-        studentsOnRegularLeave: 0
+        studentsOnRegularLeave: 0,
+        studentsOnUnapprovedLeave: 0
       };
     }
   }
@@ -153,14 +160,18 @@ export class AttendanceTrackingService {
       const hasApprovedGoal = goalMap.has(student.id);
       const hasSubmittedReflection = reflectionMap.has(student.id);
       
-      // Check leave type from leave_requests first, then fall back to user status
-      let leaveType = leaveMap.get(student.id);
-      let isOnLeave = leaveMap.has(student.id);
+      // Priority: User's current status is the source of truth
+      let leaveType: 'kitchen_leave' | 'on_leave' | 'unapproved_leave' | undefined;
+      let isOnLeave = false;
       
-      // If no active leave request but user status indicates leave, use that
-      if (!isOnLeave && (student.status === 'kitchen_leave' || student.status === 'on_leave')) {
+      // Check user status first
+      if (student.status === 'kitchen_leave' || student.status === 'on_leave' || student.status === 'unapproved_leave') {
         isOnLeave = true;
-        leaveType = student.status as 'kitchen_leave' | 'on_leave';
+        leaveType = student.status as 'kitchen_leave' | 'on_leave' | 'unapproved_leave';
+      } else if (leaveMap.has(student.id)) {
+        // Fall back to leave request if status doesn't indicate leave
+        isOnLeave = true;
+        leaveType = leaveMap.get(student.id);
       }
       
       const isPresent = hasApprovedGoal && !isOnLeave; // Present if goal approved
@@ -356,12 +367,13 @@ export class AttendanceTrackingService {
       let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
 
       // Filter by status, campus, and role (exclude admin and academic_associate)
-      // Include active, kitchen_leave, and on_leave students (exclude inactive, dropout, placed)
+      // Include active, kitchen_leave, on_leave, and unapproved_leave students (exclude inactive, dropout, placed)
       students = students.filter(student => {
         const isActiveOrOnLeave = !student.status || 
           student.status === 'active' || 
           student.status === 'kitchen_leave' || 
-          student.status === 'on_leave';
+          student.status === 'on_leave' ||
+          student.status === 'unapproved_leave';
         const matchesCampus = !campus || student.campus === campus;
         const isNotAdminRole = student.role !== 'admin' && student.role !== 'academic_associate';
         return isActiveOrOnLeave && matchesCampus && isNotAdminRole;

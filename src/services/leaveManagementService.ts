@@ -291,40 +291,20 @@ export class LeaveManagementService {
         updated_at: serverTimestamp()
       });
 
-      // Update user status based on leave type
-      const userStatus = leave.leave_type === 'kitchen_leave' ? 'kitchen_leave' : 'on_leave';
-      
-      console.log(`[ApproveLeave] Updating user ${leave.user_id} status to: ${userStatus}`);
-      console.log(`[ApproveLeave] Leave type: ${leave.leave_type}`);
-      
-      // First update using UserService to invalidate cache
-      await UserService.updateUser(leave.user_id, {
-        status: userStatus,
-        leave_from: leave.start_date,
-        leave_to: leave.end_date,
-        updated_at: new Date()
-      });
+      // Check if this leave is currently active (started) or future
+      const now = new Date();
+      const leaveStart = new Date(leave.start_date);
+      leaveStart.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
 
-      // Double-check with direct Firestore update to ensure it persists
-      const userRef = doc(db, COLLECTIONS.USERS, leave.user_id);
-      await updateDoc(userRef, {
-        status: userStatus,
-        leave_from: Timestamp.fromDate(leave.start_date),
-        leave_to: Timestamp.fromDate(leave.end_date),
-        updated_at: serverTimestamp()
-      });
+      if (leaveStart <= now) {
+        // Leave has already started, update user status immediately
+        await this.updateUserStatusFromActiveLeaves(leave.user_id);
+      } else {
+        console.log(`[ApproveLeave] Leave starts in future (${leaveStart.toLocaleDateString()}), not updating user status yet`);
+      }
 
       console.log(`[ApproveLeave] User status updated successfully`);
-
-      // Verify the update by fetching the user again
-      const updatedUser = await UserService.getUserById(leave.user_id);
-      console.log(`[ApproveLeave] Verified user status after update:`, updatedUser?.status);
-
-      // Force cache invalidation for user data to ensure UI updates
-      const { queryCache } = await import('../utils/cache');
-      queryCache.invalidatePattern('users');
-      queryCache.invalidate(`users:id:${leave.user_id}`);
-      console.log(`[ApproveLeave] Cache invalidated for user ${leave.user_id}`);
 
       // Create notification for user
       await this.createNotification(
@@ -377,6 +357,67 @@ export class LeaveManagementService {
     }
   }
 
+  // Helper function to update user status based on their current active leaves
+  private static async updateUserStatusFromActiveLeaves(userId: string): Promise<void> {
+    try {
+      const now = new Date();
+      const userLeaves = await this.getUserLeaves(userId);
+      
+      // Find the currently active approved leave (prioritize on_leave over kitchen_leave)
+      const activeOnLeave = userLeaves.find(l => 
+        l.status === 'approved' && 
+        l.leave_type === 'on_leave' &&
+        new Date(l.start_date) <= now && 
+        new Date(l.end_date) >= now
+      );
+
+      const activeKitchenLeave = userLeaves.find(l => 
+        l.status === 'approved' && 
+        l.leave_type === 'kitchen_leave' &&
+        new Date(l.start_date) <= now && 
+        new Date(l.end_date) >= now
+      );
+
+      // Prioritize on_leave over kitchen_leave
+      const activeLeave = activeOnLeave || activeKitchenLeave;
+
+      if (activeLeave) {
+        const userStatus = activeLeave.leave_type === 'kitchen_leave' ? 'kitchen_leave' : 'on_leave';
+        console.log(`[UpdateUserStatus] Setting user ${userId} status to ${userStatus} based on active ${activeLeave.leave_type}`);
+        
+        await UserService.updateUser(userId, {
+          status: userStatus,
+          leave_from: activeLeave.start_date,
+          leave_to: activeLeave.end_date,
+          updated_at: new Date()
+        });
+
+        // Force cache invalidation
+        const { queryCache } = await import('../utils/cache');
+        queryCache.invalidatePattern('users');
+        queryCache.invalidate(`users:id:${userId}`);
+      } else {
+        // No active leaves, set status to active
+        console.log(`[UpdateUserStatus] No active leaves for user ${userId}, setting status to active`);
+        
+        await UserService.updateUser(userId, {
+          status: 'active',
+          leave_from: deleteField() as any,
+          leave_to: deleteField() as any,
+          updated_at: new Date()
+        });
+
+        // Force cache invalidation
+        const { queryCache } = await import('../utils/cache');
+        queryCache.invalidatePattern('users');
+        queryCache.invalidate(`users:id:${userId}`);
+      }
+    } catch (error) {
+      console.error('[UpdateUserStatus] Error updating user status from active leaves:', error);
+      throw error;
+    }
+  }
+
   // Check and expire kitchen leaves (should be run daily at midnight)
   static async expireKitchenLeaves(): Promise<void> {
     try {
@@ -420,13 +461,8 @@ export class LeaveManagementService {
           updated_at: serverTimestamp()
         });
 
-        // Update user status back to active
-        await UserService.updateUser(leave.user_id, {
-          status: 'active',
-          leave_from: deleteField() as any,
-          leave_to: deleteField() as any,
-          updated_at: new Date()
-        });
+        // Update user status based on any remaining active leaves
+        await this.updateUserStatusFromActiveLeaves(leave.user_id);
       }
 
       console.log(`Expired ${expiredLeaves.length} kitchen leaves`);
@@ -468,7 +504,7 @@ export class LeaveManagementService {
         }
       });
 
-      // Notify users and admins about expired leaves
+      // Mark leaves as expired and set user status to unapproved_leave
       for (const leave of expiredLeaves) {
         // Mark leave as expired
         const leaveRef = doc(db, COLLECTIONS.LEAVES, leave.id);
@@ -477,12 +513,22 @@ export class LeaveManagementService {
           updated_at: serverTimestamp()
         });
 
+        // Set user status to unapproved_leave
+        console.log(`[ExpiredOnLeave] Setting user ${leave.user_id} status to unapproved_leave`);
+        await UserService.updateUser(leave.user_id, {
+          status: 'unapproved_leave',
+          unapproved_leave_start: new Date(),
+          leave_from: deleteField() as any,
+          leave_to: deleteField() as any,
+          updated_at: new Date()
+        });
+
         // Notify user
         await this.createNotification(
           leave.user_id,
           'leave_expired',
-          'Leave Expired',
-          `Your leave period has ended. Please reapply if you need more time or contact admin/academic associate to change your status.`,
+          'Leave Expired - Status Changed to Unapproved Leave',
+          `Your leave period has ended. Your status has been changed to unapproved leave. Please contact admin/academic associate to update your status.`,
           leave.id
         );
 
@@ -518,6 +564,59 @@ export class LeaveManagementService {
       await Promise.all(notifications);
     } catch (error) {
       console.error('Error notifying admins about expired leave:', error);
+      throw error;
+    }
+  }
+
+  // Check and activate future leaves that have started
+  static async activateFutureLeaves(): Promise<void> {
+    try {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const leavesRef = collection(db, COLLECTIONS.LEAVES);
+      const q = query(
+        leavesRef,
+        where('status', '==', 'approved')
+      );
+
+      const snapshot = await getDocs(q);
+      const leavesToActivate: { leave: Leave; userId: string }[] = [];
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const leave: Leave = {
+          id: doc.id,
+          ...data,
+          start_date: data.start_date?.toDate(),
+          end_date: data.end_date?.toDate(),
+          created_at: data.created_at?.toDate(),
+          updated_at: data.updated_at?.toDate()
+        } as Leave;
+
+        const leaveStart = new Date(leave.start_date);
+        leaveStart.setHours(0, 0, 0, 0);
+
+        const leaveEnd = new Date(leave.end_date);
+        leaveEnd.setHours(0, 0, 0, 0);
+
+        // Check if leave has started today and is still active
+        if (leaveStart <= now && leaveEnd >= now) {
+          leavesToActivate.push({ leave, userId: leave.user_id });
+        }
+      });
+
+      // Group by user ID to avoid multiple updates for same user
+      const userIds = Array.from(new Set(leavesToActivate.map(item => item.userId)));
+
+      for (const userId of userIds) {
+        console.log(`[ActivateFutureLeaves] Updating status for user ${userId}`);
+        await this.updateUserStatusFromActiveLeaves(userId);
+      }
+
+      console.log(`Activated status for ${userIds.length} users with newly started leaves`);
+    } catch (error) {
+      console.error('Error activating future leaves:', error);
       throw error;
     }
   }

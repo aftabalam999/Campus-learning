@@ -38,7 +38,10 @@ export class LeaveScheduler {
     try {
       console.log('Checking for expired leaves...');
       
-      // Expire kitchen leaves (auto-changes status to active)
+      // Activate future leaves that have started
+      await LeaveManagementService.activateFutureLeaves();
+      
+      // Expire kitchen leaves (auto-changes status to active or next active leave)
       await LeaveManagementService.expireKitchenLeaves();
       
       // Check and notify for expired on leaves (doesn't auto-change status)

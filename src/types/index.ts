@@ -37,9 +37,10 @@ export interface User {
   campus?: 'Dantewada' | 'Dharamshala' | 'Eternal' | 'Jashpur' | 'Kishanganj' | 'Pune' | 'Raigarh' | 'Sarjapura' | 'Bageshree' | 'Malhar' | 'Bhairav';  // User's campus or house
   current_phase_id?: string;  // Current phase the user is on
   current_phase_name?: string;  // Denormalized phase name for display
-  status?: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave';  // User's current status
+  status?: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave' | 'unapproved_leave';  // User's current status
   leave_from?: Date;  // Start date of leave period
   leave_to?: Date;    // End date of leave period
+  unapproved_leave_start?: Date;  // Date when unapproved leave started (when on_leave expired)
   campus_joining_date?: Date; // Date when student joined the campus
   deleted_at?: Date;  // Soft delete timestamp
   created_at: Date;

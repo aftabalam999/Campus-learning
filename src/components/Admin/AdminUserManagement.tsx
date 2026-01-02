@@ -30,7 +30,7 @@ const AdminUserManagement: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showStatusModal, setShowStatusModal] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave'>('active');
+  const [selectedStatus, setSelectedStatus] = useState<'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave' | 'unapproved_leave'>('active');
   const [showRoleModal, setShowRoleModal] = useState<boolean>(false);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'academic_associate' | 'super_mentor' | 'mentor' | 'student'>('student');
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -89,15 +89,24 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (userId: string, newStatus: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave') => {
+  const handleUpdateStatus = async (userId: string, newStatus: 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave' | 'unapproved_leave') => {
     try {
       setUpdating(userId);
       await AdminService.updateUserStatus(userId, newStatus);
       
-      // Update local state
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, status: newStatus } : user
-      ));
+      // Update local state with the new status and unapproved_leave_start if applicable
+      setUsers(users.map(user => {
+        if (user.id === userId) {
+          const updatedUser = { ...user, status: newStatus };
+          if (newStatus === 'unapproved_leave') {
+            updatedUser.unapproved_leave_start = new Date();
+          } else {
+            updatedUser.unapproved_leave_start = undefined;
+          }
+          return updatedUser;
+        }
+        return user;
+      }));
       
       setShowStatusModal(null);
     } catch (error) {
@@ -152,6 +161,7 @@ const AdminUserManagement: React.FC = () => {
       case 'placed': return <Award className="h-4 w-4 text-purple-500" />;
       case 'on_leave': return <Clock className="h-4 w-4 text-orange-500" />;
       case 'kitchen_leave': return <Clock className="h-4 w-4 text-blue-500" />;
+      case 'unapproved_leave': return <Clock className="h-4 w-4 text-red-600" />;
       default: return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
   };
@@ -164,6 +174,7 @@ const AdminUserManagement: React.FC = () => {
       case 'placed': return 'Placed';
       case 'on_leave': return 'On Leave';
       case 'kitchen_leave': return 'Kitchen Leave';
+      case 'unapproved_leave': return 'Unapproved Leave';
       default: return 'Active';
     }
   };
@@ -176,6 +187,7 @@ const AdminUserManagement: React.FC = () => {
       case 'placed': return 'bg-purple-100 text-purple-800';
       case 'on_leave': return 'bg-orange-100 text-orange-800';
       case 'kitchen_leave': return 'bg-blue-100 text-blue-800';
+      case 'unapproved_leave': return 'bg-red-100 text-red-900';
       default: return 'bg-green-100 text-green-800';
     }
   };
@@ -675,7 +687,7 @@ const AdminUserManagement: React.FC = () => {
               </label>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave')}
+                onChange={(e) => setSelectedStatus(e.target.value as 'active' | 'inactive' | 'dropout' | 'placed' | 'on_leave' | 'kitchen_leave' | 'unapproved_leave')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="active">Active</option>
@@ -684,6 +696,7 @@ const AdminUserManagement: React.FC = () => {
                 <option value="placed">Placed</option>
                 <option value="on_leave">On Leave</option>
                 <option value="kitchen_leave">Kitchen Leave</option>
+                <option value="unapproved_leave">Unapproved Leave</option>
               </select>
             </div>
             <div className="flex justify-end space-x-3">

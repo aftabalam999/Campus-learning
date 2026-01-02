@@ -568,9 +568,12 @@ export class DiscordService {
     attendanceRate: number,
     studentsOnKitchenLeave: number,
     studentsOnRegularLeave: number,
+    studentsOnUnapprovedLeave: number,
     absentStudentsList: string[],
     kitchenLeaveStudentsList: string[],
     regularLeaveStudentsList: string[],
+    unapprovedLeaveStudentsList: string[],
+    unapprovedLeaveDetails: { name: string; startDate: string }[],
     campus?: string
   ): Promise<void> {
     const webhookUrl = campus ? await this.getCampusWebhook(campus) : this.WEBHOOK_URL;
@@ -603,6 +606,14 @@ export class DiscordService {
     
     const moreRegularLeave = regularLeaveStudentsList.length > 30
       ? `\n_...and ${regularLeaveStudentsList.length - 30} more_`
+      : '';
+
+    const unapprovedLeaveList = unapprovedLeaveDetails.length > 0
+      ? unapprovedLeaveDetails.slice(0, 20).map(u => `${u.name} (since ${u.startDate})`).join(', ')
+      : 'None';
+    
+    const moreUnapprovedLeave = unapprovedLeaveDetails.length > 20
+      ? `\n_...and ${unapprovedLeaveDetails.length - 20} more_`
       : '';
 
     // Choose color based on attendance rate
@@ -643,7 +654,12 @@ export class DiscordService {
           inline: false,
         },
         {
-          name: '📈 Attendance Rate',
+          name: '� Unapproved Leave',
+          value: `${studentsOnUnapprovedLeave} students`,
+          inline: false,
+        },
+        {
+          name: '�📈 Attendance Rate',
           value: `${attendanceRate.toFixed(1)}%`,
           inline: false,
         },
@@ -660,6 +676,11 @@ export class DiscordService {
         {
           name: '🏖️ On Leave Students',
           value: regularLeaveList + moreRegularLeave,
+          inline: false,
+        },
+        {
+          name: '🚨 Unapproved Leave Students',
+          value: unapprovedLeaveList + moreUnapprovedLeave,
           inline: false,
         },
       ],
@@ -686,9 +707,12 @@ export class DiscordService {
     attendanceRate: number,
     studentsOnKitchenLeave: number,
     studentsOnRegularLeave: number,
+    studentsOnUnapprovedLeave: number,
     absentStudentsList: string[],
     kitchenLeaveStudentsList: string[],
-    regularLeaveStudentsList: string[]
+    regularLeaveStudentsList: string[],
+    unapprovedLeaveStudentsList: string[],
+    unapprovedLeaveDetails: { name: string; startDate: string }[]
   ): Promise<void> {
     await this.sendAttendanceReport(
       date,
@@ -698,9 +722,12 @@ export class DiscordService {
       attendanceRate,
       studentsOnKitchenLeave,
       studentsOnRegularLeave,
+      studentsOnUnapprovedLeave,
       absentStudentsList,
       kitchenLeaveStudentsList,
       regularLeaveStudentsList,
+      unapprovedLeaveStudentsList,
+      unapprovedLeaveDetails,
       campus
     );
   }
