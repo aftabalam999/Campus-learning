@@ -13,6 +13,7 @@ export class AttendanceScheduler {
   private static schedulerInterval: NodeJS.Timeout | null = null;
   private static isRunning = false;
   private static lastReportDate: string | null = null; // Track last sent report date
+  private static isSendingReport = false; // Prevent concurrent sending
 
   /**
    * Start the attendance scheduler
@@ -20,8 +21,15 @@ export class AttendanceScheduler {
    */
   static startScheduler(): void {
     if (this.isRunning) {
-      console.log('Attendance scheduler is already running');
+      console.log('⚠️ Attendance scheduler is already running - skipping duplicate start');
       return;
+    }
+
+    // Double-check if there's an existing interval
+    if (this.schedulerInterval) {
+      console.log('⚠️ Clearing existing scheduler interval');
+      clearInterval(this.schedulerInterval);
+      this.schedulerInterval = null;
     }
 
     console.log('🚀 Starting attendance scheduler...');
@@ -35,7 +43,7 @@ export class AttendanceScheduler {
       this.checkAndSendReport();
     }, 60000); // Check every 1 minute
 
-    console.log('✅ Attendance scheduler started successfully');
+    console.log('✅ Attendance scheduler started successfully - reports will be sent at 10:00 AM daily');
   }
 
   /**
@@ -57,14 +65,30 @@ export class AttendanceScheduler {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
     const todayDate = now.toISOString().split('T')[0];
+
+    // Log current time for debugging (only at the start of each minute)
+    if (seconds === 0) {
+      console.log(`⏰ Scheduler check: ${hours}:${minutes.toString().padStart(2, '0')}`);
+    }
 
     // Send report at 10:00 AM (hours === 10 and minutes === 0)
     // Only send once per day by checking lastReportDate
-    if (hours === 10 && minutes === 0 && this.lastReportDate !== todayDate) {
+    // Also check if not already sending to prevent duplicates
+    if (hours === 10 && minutes === 0 && this.lastReportDate !== todayDate && !this.isSendingReport) {
       console.log('⏰ It\'s 10:00 AM - Sending morning attendance reports...');
+      this.isSendingReport = true; // Lock to prevent concurrent sends
       this.lastReportDate = todayDate; // Mark as sent for today
-      await this.sendAllCampusReports();
+      
+      try {
+        await this.sendAllCampusReports();
+        console.log('✅ Morning attendance reports sent successfully');
+      } catch (error) {
+        console.error('❌ Error sending morning reports:', error);
+      } finally {
+        this.isSendingReport = false; // Unlock after sending
+      }
     }
   }
 
