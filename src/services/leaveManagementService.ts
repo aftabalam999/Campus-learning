@@ -1,6 +1,6 @@
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp, orderBy, getDoc, deleteField } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp, getDoc, deleteField } from 'firebase/firestore';
 import { db } from './firebase';
-import { Leave, User } from '../types';
+import { Leave } from '../types';
 import { UserService } from './firestore';
 
 const COLLECTIONS = {
@@ -13,8 +13,9 @@ export class LeaveManagementService {
   // Check if there's a conflicting leave on the requested dates
   private static async checkLeaveConflict(userId: string, startDate: Date, endDate: Date): Promise<Leave | null> {
     try {
+      // This calls getUserLeaves which we have fixed to not use composite indexes
       const userLeaves = await this.getUserLeaves(userId);
-      
+
       // Normalize dates to compare only date part (ignore time)
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -67,7 +68,7 @@ export class LeaveManagementService {
         const end = new Date(endDate);
         start.setHours(0, 0, 0, 0);
         end.setHours(0, 0, 0, 0);
-        
+
         if (start.getTime() !== end.getTime()) {
           throw new Error('Kitchen leave can only be applied for a single day');
         }
@@ -151,15 +152,18 @@ export class LeaveManagementService {
   // Get all leaves for a user
   static async getUserLeaves(userId: string): Promise<Leave[]> {
     try {
+      console.log('[LeaveManagementService] Getting leaves for user:', userId);
       const leavesRef = collection(db, COLLECTIONS.LEAVES);
+
+      // FIX: Removed orderBy to avoid "requires an index" error
+      // Simple equality filter should work without composite index
       const q = query(
         leavesRef,
-        where('user_id', '==', userId),
-        orderBy('created_at', 'desc')
+        where('user_id', '==', userId)
       );
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const leaves = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -172,6 +176,9 @@ export class LeaveManagementService {
           rejected_at: data.rejected_at?.toDate()
         } as Leave;
       });
+
+      // Sort in memory (descending order by created_at)
+      return leaves.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
     } catch (error) {
       console.error('Error getting user leaves:', error);
       throw error;
@@ -182,14 +189,15 @@ export class LeaveManagementService {
   static async getPendingLeaves(): Promise<Leave[]> {
     try {
       const leavesRef = collection(db, COLLECTIONS.LEAVES);
+
+      // FIX: Removed orderBy to avoid "requires an index" error
       const q = query(
         leavesRef,
-        where('status', '==', 'pending'),
-        orderBy('created_at', 'desc')
+        where('status', '==', 'pending')
       );
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const leaves = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -202,6 +210,9 @@ export class LeaveManagementService {
           rejected_at: data.rejected_at?.toDate()
         } as Leave;
       });
+
+      // Sort in memory by created_at desc
+      return leaves.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
     } catch (error: any) {
       // If index is still building, return empty array silently
       if (error?.message?.includes('index is currently building')) {
@@ -217,10 +228,13 @@ export class LeaveManagementService {
   static async getAllLeaves(): Promise<Leave[]> {
     try {
       const leavesRef = collection(db, COLLECTIONS.LEAVES);
-      const q = query(leavesRef, orderBy('created_at', 'desc'));
+
+      // FIX: Removed orderBy here too, just to be safe and consistent
+      // We will sort in memory
+      const q = query(leavesRef);
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const leaves = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -233,6 +247,9 @@ export class LeaveManagementService {
           rejected_at: data.rejected_at?.toDate()
         } as Leave;
       });
+
+      // Sort in memory
+      return leaves.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
     } catch (error) {
       console.error('Error getting all leaves:', error);
       throw error;
@@ -253,7 +270,7 @@ export class LeaveManagementService {
 
       // Check for conflicting approved leaves (excluding the current leave request and rejected/expired ones)
       const userLeaves = await this.getUserLeaves(leave.user_id);
-      
+
       const start = new Date(leave.start_date);
       const end = new Date(leave.end_date);
       start.setHours(0, 0, 0, 0);
@@ -361,22 +378,35 @@ export class LeaveManagementService {
   private static async updateUserStatusFromActiveLeaves(userId: string): Promise<void> {
     try {
       const now = new Date();
-      const userLeaves = await this.getUserLeaves(userId);
-      
-      // Find the currently active approved leave (prioritize on_leave over kitchen_leave)
-      const activeOnLeave = userLeaves.find(l => 
-        l.status === 'approved' && 
-        l.leave_type === 'on_leave' &&
-        new Date(l.start_date) <= now && 
-        new Date(l.end_date) >= now
-      );
+      now.setHours(0, 0, 0, 0); // Normalize comparison to date only
 
-      const activeKitchenLeave = userLeaves.find(l => 
-        l.status === 'approved' && 
-        l.leave_type === 'kitchen_leave' &&
-        new Date(l.start_date) <= now && 
-        new Date(l.end_date) >= now
-      );
+      const userLeaves = await this.getUserLeaves(userId);
+
+      // Find the currently active approved leave (prioritize on_leave over kitchen_leave)
+      // We normalize all dates to midnight for consistent comparison
+      const activeOnLeave = userLeaves.find(l => {
+        const start = new Date(l.start_date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(l.end_date);
+        end.setHours(0, 0, 0, 0);
+
+        return l.status === 'approved' &&
+          l.leave_type === 'on_leave' &&
+          start <= now &&
+          end >= now;
+      });
+
+      const activeKitchenLeave = userLeaves.find(l => {
+        const start = new Date(l.start_date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(l.end_date);
+        end.setHours(0, 0, 0, 0);
+
+        return l.status === 'approved' &&
+          l.leave_type === 'kitchen_leave' &&
+          start <= now &&
+          end >= now;
+      });
 
       // Prioritize on_leave over kitchen_leave
       const activeLeave = activeOnLeave || activeKitchenLeave;
@@ -384,7 +414,7 @@ export class LeaveManagementService {
       if (activeLeave) {
         const userStatus = activeLeave.leave_type === 'kitchen_leave' ? 'kitchen_leave' : 'on_leave';
         console.log(`[UpdateUserStatus] Setting user ${userId} status to ${userStatus} based on active ${activeLeave.leave_type}`);
-        
+
         await UserService.updateUser(userId, {
           status: userStatus,
           leave_from: activeLeave.start_date,
@@ -399,7 +429,7 @@ export class LeaveManagementService {
       } else {
         // No active leaves, set status to active
         console.log(`[UpdateUserStatus] No active leaves for user ${userId}, setting status to active`);
-        
+
         await UserService.updateUser(userId, {
           status: 'active',
           leave_from: deleteField() as any,
@@ -551,7 +581,7 @@ export class LeaveManagementService {
       const q = query(usersRef, where('role', 'in', ['admin', 'academic_associate']));
       const snapshot = await getDocs(q);
 
-      const notifications = snapshot.docs.map(doc => 
+      const notifications = snapshot.docs.map(doc =>
         this.createNotification(
           doc.id,
           'leave_expired_admin',
@@ -670,30 +700,39 @@ export class LeaveManagementService {
   static async getUserActiveLeave(userId: string): Promise<Leave | null> {
     try {
       const leavesRef = collection(db, COLLECTIONS.LEAVES);
+
+      // Removed orderBy and status 'in' check to be safe with indexes
       const q = query(
         leavesRef,
-        where('user_id', '==', userId),
-        where('status', 'in', ['approved', 'pending']),
-        orderBy('created_at', 'desc')
+        where('user_id', '==', userId)
       );
 
       const snapshot = await getDocs(q);
-      if (snapshot.empty) {
+      const leaves = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          start_date: data.start_date?.toDate(),
+          end_date: data.end_date?.toDate(),
+          created_at: data.created_at?.toDate(),
+          updated_at: data.updated_at?.toDate(),
+          approved_at: data.approved_at?.toDate(),
+          rejected_at: data.rejected_at?.toDate()
+        } as Leave;
+      });
+
+      // Filter for approved or pending status locally
+      const activeLeaves = leaves.filter(l => ['approved', 'pending'].includes(l.status));
+
+      if (activeLeaves.length === 0) {
         return null;
       }
 
-      const doc = snapshot.docs[0];
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        start_date: data.start_date?.toDate(),
-        end_date: data.end_date?.toDate(),
-        created_at: data.created_at?.toDate(),
-        updated_at: data.updated_at?.toDate(),
-        approved_at: data.approved_at?.toDate(),
-        rejected_at: data.rejected_at?.toDate()
-      } as Leave;
+      // Sort by created_at desc and take the first one
+      activeLeaves.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+
+      return activeLeaves[0];
     } catch (error) {
       console.error('Error getting user active leave:', error);
       throw error;

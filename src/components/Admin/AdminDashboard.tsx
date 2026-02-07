@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import PhaseTimelineAdminPanel from './PhaseTimelineAdminPanel';
 // import removed: useNavigate
 import { DataSeedingService } from '../../services/dataSeedingService';
+import { UserSeedingService } from '../../services/userSeedingService';
 import AdminUserManagement from './AdminUserManagement';
 import MentorAssignment from './MentorAssignment';
 import CurriculumAdminPanel from './CurriculumAdminPanel';
@@ -125,7 +126,7 @@ const AdminDashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           {/* Webhook Notification Bell */}
           <WebhookNotificationBell />
-          
+
           <button
             onClick={() => navigate('/student/dashboard')}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
@@ -198,9 +199,9 @@ const AdminDashboard: React.FC = () => {
         )}
         {mainTab === 'user-management' && subTab === 'leave-management' && (
           <div className="p-6">
-            <AdminLeaveManagement 
-              adminId={userData?.id || ''} 
-              adminName={userData?.name || userData?.display_name || 'Admin'} 
+            <AdminLeaveManagement
+              adminId={userData?.id || ''}
+              adminName={userData?.name || userData?.display_name || 'Admin'}
             />
           </div>
         )}
@@ -266,15 +267,43 @@ const AdminDashboard: React.FC = () => {
                   }
                 }}
                 disabled={seeding}
-                className={`px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  seeding 
-                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
+                className={`px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${seeding
+                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
               >
                 {seeding ? 'Seeding Data...' : 'Seed Curriculum Data'}
               </button>
-              
+
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">User Data Management</h3>
+                <p className="text-gray-600 mb-4">
+                  Create dummy users (Mentors and Students) and generate activity data for testing.
+                </p>
+                <button
+                  onClick={async () => {
+                    setSeeding(true);
+                    try {
+                      console.log('🌱 Starting user data seeding...');
+                      await UserSeedingService.seedUsersAndData();
+                      alert('✅ Dummy users and data seeded successfully!');
+                    } catch (error) {
+                      console.error('❌ Error seeding user data:', error);
+                      alert('❌ Failed to seed user data. Check console for details.');
+                    } finally {
+                      setSeeding(false);
+                    }
+                  }}
+                  disabled={seeding}
+                  className={`px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${seeding
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                >
+                  {seeding ? 'Seeding Users...' : 'Seed Dummy Users & Data'}
+                </button>
+              </div>
+
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-red-600 mb-2 text-sm">
                   ⚠️ <strong>Clean Up Old Data:</strong> Remove existing curriculum data before seeding new data.
@@ -285,7 +314,7 @@ const AdminDashboard: React.FC = () => {
                     if (!confirm('⚠️ This will DELETE ALL existing curriculum data in Firebase!\n\nThis includes all phases and topics. Are you sure you want to continue?')) {
                       return;
                     }
-                    
+
                     setSeeding(true);
                     try {
                       console.log('🧹 Starting curriculum data cleanup...');
@@ -300,36 +329,35 @@ const AdminDashboard: React.FC = () => {
                     }
                   }}
                   disabled={seeding}
-                  className={`px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                    seeding 
-                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
+                  className={`px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 ${seeding
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                    }`}
                 >
                   {seeding ? 'Cleaning Up...' : 'Clean Up Old Data'}
                 </button>
-                
+
                 <button
                   onClick={async () => {
                     // eslint-disable-next-line no-restricted-globals
                     if (!confirm('🔄 This will CLEAN UP old data and SEED the new unified curriculum!\n\nThis includes:\n1. Delete all existing phases and topics\n2. Create the new unified Induction phase with 25 activities\n\nProceed?')) {
                       return;
                     }
-                    
+
                     setSeeding(true);
                     try {
                       console.log('🔄 Starting clean & seed process...');
-                      
+
                       // Step 1: Clean up
                       console.log('🧹 Step 1: Cleaning up old data...');
                       await DataSeedingService.cleanupCurriculumData();
                       console.log('✅ Old data cleaned up');
-                      
+
                       // Step 2: Seed new data
                       console.log('🌱 Step 2: Seeding new curriculum...');
                       await DataSeedingService.seedInitialData();
                       console.log('✅ New curriculum seeded');
-                      
+
                       alert('🎉 SUCCESS!\n\n✅ Old curriculum data cleaned up\n✅ New unified curriculum with 25 activities created\n\nStudents will now see the updated curriculum!');
                     } catch (error) {
                       console.error('❌ Error during clean & seed process:', error);
@@ -339,11 +367,10 @@ const AdminDashboard: React.FC = () => {
                     }
                   }}
                   disabled={seeding}
-                  className={`ml-2 px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                    seeding 
-                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
+                  className={`ml-2 px-4 py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 ${seeding
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
                 >
                   {seeding ? 'Processing...' : '🔄 Clean & Seed New Data'}
                 </button>
