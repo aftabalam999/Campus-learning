@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserService } from '../../services/firestore';
-import { GoalService, ReflectionService, AdminService, MenteeReviewService, MentorReviewService } from '../../services/dataServices';
+import { GoalService, ReflectionService, AdminService, MenteeReviewService } from '../../services/dataServices';
 import { User, MenteeOverview, DailyGoal, DailyReflection, MenteeReview } from '../../types';
-import { 
+import {
   getCurrentWeekStart,
-  areSameWeek 
+  areSameWeek
 } from '../../utils/reviewDateUtils';
 import {
   Users,
@@ -57,10 +57,7 @@ const MentorDashboard: React.FC = () => {
   const [showJoiningDateModal, setShowJoiningDateModal] = useState(false);
   const [showReviewReminder, setShowReviewReminder] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
-  const [myMentorReviews, setMyMentorReviews] = useState<any[]>([]);
-  const [myMentor, setMyMentor] = useState<User | null>(null);
-  const [myMentees, setMyMentees] = useState<User[]>([]);
-  const [menteeReviews, setMenteeReviews] = useState<Record<string, any>>({});
+
 
   const handleJoiningDateUpdated = useCallback((updatedUser: User) => {
     // Update the user data in auth context
@@ -210,9 +207,9 @@ const MentorDashboard: React.FC = () => {
           );
           const avgAchievement = reflectionsWithAchievement.length > 0
             ? Math.round(
-                reflectionsWithAchievement.reduce((sum, r) => sum + (r.achieved_percentage || 0), 0) /
-                reflectionsWithAchievement.length
-              )
+              reflectionsWithAchievement.reduce((sum, r) => sum + (r.achieved_percentage || 0), 0) /
+              reflectionsWithAchievement.length
+            )
             : 0;
 
           // Get latest review for current week
@@ -257,71 +254,12 @@ const MentorDashboard: React.FC = () => {
     }
   }, [userData, loadDashboardData]);
 
-  // Load mentor reviews from students and mentee data
-  const loadReviewData = useCallback(async () => {
-    if (!userData?.id) return;
 
-    try {
-      console.log('🔄 [MentorDashboard] Loading review data...');
-      
-      // Load reviews from students (students reviewing this mentor)
-      const reviews = await MentorReviewService.getReviewsByMentor(userData.id);
-      console.log(`📊 [MentorDashboard] Loaded ${reviews.length} mentor reviews`);
-      setMyMentorReviews(reviews);
-
-      // Load mentor's own mentor if exists
-      if (userData.mentor_id) {
-        const mentorUser = await UserService.getUserById(userData.mentor_id);
-        setMyMentor(mentorUser);
-      }
-
-      // Load mentees and their latest reviews
-      const mentees = await UserService.getStudentsByMentor(userData.id);
-      setMyMentees(mentees);
-
-      const reviewsMap: Record<string, any> = {};
-      for (const mentee of mentees) {
-        const latestReview = await MenteeReviewService.getLatestReview(mentee.id);
-        if (latestReview) {
-          reviewsMap[mentee.id] = latestReview;
-        }
-      }
-      setMenteeReviews(reviewsMap);
-    } catch (error) {
-      console.error('Error loading review data:', error);
-    }
-  }, [userData]);
-
-  // Initial load and reload on page visibility/focus
-  useEffect(() => {
-    loadReviewData();
-
-    // Reload data when user comes back to the tab or focuses the window
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('👁️ [MentorDashboard] Page became visible - reloading reviews');
-        loadReviewData();
-      }
-    };
-
-    const handleFocus = () => {
-      console.log('🎯 [MentorDashboard] Window focused - reloading reviews');
-      loadReviewData();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [loadReviewData]);
 
   const getTotalPendingReviews = () => {
     return stats.myGoals.pending + stats.myReflections.pending +
-           (userData?.isAdmin ? stats.campusGoals.pending + stats.campusReflections.pending :
-            stats.menteesGoals.pending + stats.menteesReflections.pending);
+      (userData?.isAdmin ? stats.campusGoals.pending + stats.campusReflections.pending :
+        stats.menteesGoals.pending + stats.menteesReflections.pending);
   };
 
   const getAchievementColor = (score: number) => {
@@ -351,457 +289,448 @@ const MentorDashboard: React.FC = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
                 <p className="mt-2 text-gray-600">Welcome back, {userData?.name}</p>
               </div>
-            {getTotalPendingReviews() > 0 && (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <Bell className="h-5 w-5 text-yellow-600 animate-pulse" />
-                <span className="text-sm font-semibold text-yellow-800">
-                  {getTotalPendingReviews()} Pending Review{getTotalPendingReviews() !== 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
+              {getTotalPendingReviews() > 0 && (
+                <div className="flex items-center space-x-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <Bell className="h-5 w-5 text-yellow-600 animate-pulse" />
+                  <span className="text-sm font-semibold text-yellow-800">
+                    {getTotalPendingReviews()} Pending Review{getTotalPendingReviews() !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Filter Cards - Always Visible */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* My Goals Card */}
-        <button
-          onClick={() => setCurrentView(VIEW_TYPES.MY_GOALS)}
-          className={`p-6 rounded-lg border-2 transition-all text-left ${
-            currentView === VIEW_TYPES.MY_GOALS
+        {/* Filter Cards - Always Visible */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* My Goals Card */}
+          <button
+            onClick={() => setCurrentView(VIEW_TYPES.MY_GOALS)}
+            className={`p-6 rounded-lg border-2 transition-all text-left ${currentView === VIEW_TYPES.MY_GOALS
               ? 'border-blue-500 bg-blue-50 shadow-md'
               : 'border-gray-200 hover:border-blue-300 hover:shadow-sm bg-white'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <Target className="h-8 w-8 text-blue-600" />
-            {stats.myGoals.pending > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {stats.myGoals.pending}
-              </span>
-            )}
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">My Goals</h3>
-          <p className="text-sm text-gray-600">
-            {stats.myGoals.total} total • {stats.myGoals.pending} pending
-          </p>
-        </button>
+              }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Target className="h-8 w-8 text-blue-600" />
+              {stats.myGoals.pending > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                  {stats.myGoals.pending}
+                </span>
+              )}
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-1">My Goals</h3>
+            <p className="text-sm text-gray-600">
+              {stats.myGoals.total} total • {stats.myGoals.pending} pending
+            </p>
+          </button>
 
-        {/* My Mentees Card */}
-        <button
-          onClick={() => setCurrentView(VIEW_TYPES.MY_MENTEES)}
-          className={`p-6 rounded-lg border-2 transition-all text-left ${
-            currentView === VIEW_TYPES.MY_MENTEES
+          {/* My Mentees Card */}
+          <button
+            onClick={() => setCurrentView(VIEW_TYPES.MY_MENTEES)}
+            className={`p-6 rounded-lg border-2 transition-all text-left ${currentView === VIEW_TYPES.MY_MENTEES
               ? 'border-green-500 bg-green-50 shadow-md'
               : 'border-gray-200 hover:border-green-300 hover:shadow-sm bg-white'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <UserCheck className="h-8 w-8 text-green-600" />
-            {(stats.menteesGoals.pending + stats.menteesReflections.pending) > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {stats.menteesGoals.pending + stats.menteesReflections.pending}
-              </span>
-            )}
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">My Mentees</h3>
-          <p className="text-sm text-gray-600">
-            {stats.totalMentees} students • {stats.menteesGoals.pending + stats.menteesReflections.pending} pending
-          </p>
-        </button>
+              }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <UserCheck className="h-8 w-8 text-green-600" />
+              {(stats.menteesGoals.pending + stats.menteesReflections.pending) > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                  {stats.menteesGoals.pending + stats.menteesReflections.pending}
+                </span>
+              )}
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-1">My Mentees</h3>
+            <p className="text-sm text-gray-600">
+              {stats.totalMentees} students • {stats.menteesGoals.pending + stats.menteesReflections.pending} pending
+            </p>
+          </button>
 
-        {/* My Mentor Card */}
-        <button
-          onClick={() => setCurrentView(VIEW_TYPES.MY_MENTOR)}
-          className={`p-6 rounded-lg border-2 transition-all text-left ${
-            currentView === VIEW_TYPES.MY_MENTOR
+          {/* My Mentor Card */}
+          <button
+            onClick={() => setCurrentView(VIEW_TYPES.MY_MENTOR)}
+            className={`p-6 rounded-lg border-2 transition-all text-left ${currentView === VIEW_TYPES.MY_MENTOR
               ? 'border-purple-500 bg-purple-50 shadow-md'
               : 'border-gray-200 hover:border-purple-300 hover:shadow-sm bg-white'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <GraduationCap className="h-8 w-8 text-purple-600" />
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">My Mentor</h3>
-          <p className="text-sm text-gray-600">
-            {mentorData?.name || 'Not assigned'} • {stats.mentorGoals.total + stats.mentorReflections.total} items
-          </p>
-        </button>
+              }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <GraduationCap className="h-8 w-8 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-1">My Mentor</h3>
+            <p className="text-sm text-gray-600">
+              {mentorData?.name || 'Not assigned'} • {stats.mentorGoals.total + stats.mentorReflections.total} items
+            </p>
+          </button>
 
-        {/* Campus Overview Card */}
-        <button
-          onClick={() => setCurrentView(VIEW_TYPES.CAMPUS_OVERVIEW)}
-          className={`p-6 rounded-lg border-2 transition-all text-left ${
-            currentView === VIEW_TYPES.CAMPUS_OVERVIEW
+          {/* Campus Overview Card */}
+          <button
+            onClick={() => setCurrentView(VIEW_TYPES.CAMPUS_OVERVIEW)}
+            className={`p-6 rounded-lg border-2 transition-all text-left ${currentView === VIEW_TYPES.CAMPUS_OVERVIEW
               ? 'border-orange-500 bg-orange-50 shadow-md'
               : 'border-gray-200 hover:border-orange-300 hover:shadow-sm bg-white'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <Users className="h-8 w-8 text-orange-600" />
-            {(stats.campusGoals.pending + stats.campusReflections.pending) > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {stats.campusGoals.pending + stats.campusReflections.pending}
-              </span>
-            )}
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">Campus Overview</h3>
-          <p className="text-sm text-gray-600">
-            {stats.totalStudents} students • {stats.campusGoals.pending + stats.campusReflections.pending} pending
-          </p>
-        </button>
-      </div>
+              }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Users className="h-8 w-8 text-orange-600" />
+              {(stats.campusGoals.pending + stats.campusReflections.pending) > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                  {stats.campusGoals.pending + stats.campusReflections.pending}
+                </span>
+              )}
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-1">Campus Overview</h3>
+            <p className="text-sm text-gray-600">
+              {stats.totalStudents} students • {stats.campusGoals.pending + stats.campusReflections.pending} pending
+            </p>
+          </button>
+        </div>
 
-      {/* Content Area */}
-      {currentView === VIEW_TYPES.MY_GOALS && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-6">My Goals & Reflections</h2>
+        {/* Content Area */}
+        {currentView === VIEW_TYPES.MY_GOALS && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-6">My Goals & Reflections</h2>
 
-          <div className="space-y-6">
-            {/* Group goals and reflections by date */}
-            {(() => {
-              // Combine and sort goals and reflections by date (pending first, then by date)
-              const allItems = [
-                ...myGoals.map(goal => ({
-                  type: 'goal' as const,
-                  date: goal.created_at,
-                  data: goal,
-                  status: goal.status,
-                  id: goal.id
-                })),
-                ...myReflections.map(reflection => ({
-                  type: 'reflection' as const,
-                  date: reflection.created_at,
-                  data: reflection,
-                  status: reflection.status,
-                  id: reflection.id
-                }))
-              ].sort((a, b) => {
-                // Sort by status first (pending first), then by date (newest first)
-                if (a.status === 'pending' && b.status !== 'pending') return -1;
-                if (a.status !== 'pending' && b.status === 'pending') return 1;
-                return new Date(b.date).getTime() - new Date(a.date).getTime();
-              });
+            <div className="space-y-6">
+              {/* Group goals and reflections by date */}
+              {(() => {
+                // Combine and sort goals and reflections by date (pending first, then by date)
+                const allItems = [
+                  ...myGoals.map(goal => ({
+                    type: 'goal' as const,
+                    date: goal.created_at,
+                    data: goal,
+                    status: goal.status,
+                    id: goal.id
+                  })),
+                  ...myReflections.map(reflection => ({
+                    type: 'reflection' as const,
+                    date: reflection.created_at,
+                    data: reflection,
+                    status: reflection.status,
+                    id: reflection.id
+                  }))
+                ].sort((a, b) => {
+                  // Sort by status first (pending first), then by date (newest first)
+                  if (a.status === 'pending' && b.status !== 'pending') return -1;
+                  if (a.status !== 'pending' && b.status === 'pending') return 1;
+                  return new Date(b.date).getTime() - new Date(a.date).getTime();
+                });
 
-              // Group by date
-              const groupedByDate = allItems.reduce((groups, item) => {
-                const dateKey = new Date(item.date).toDateString();
-                if (!groups[dateKey]) {
-                  groups[dateKey] = [];
-                }
-                groups[dateKey].push(item);
-                return groups;
-              }, {} as Record<string, typeof allItems>);
+                // Group by date
+                const groupedByDate = allItems.reduce((groups, item) => {
+                  const dateKey = new Date(item.date).toDateString();
+                  if (!groups[dateKey]) {
+                    groups[dateKey] = [];
+                  }
+                  groups[dateKey].push(item);
+                  return groups;
+                }, {} as Record<string, typeof allItems>);
 
-              return Object.entries(groupedByDate).map(([dateStr, items]) => (
-                <div key={dateStr} className="border rounded-lg p-4 bg-gray-50">
-                  <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                    {new Date(dateStr).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </h3>
+                return Object.entries(groupedByDate).map(([dateStr, items]) => (
+                  <div key={dateStr} className="border rounded-lg p-4 bg-gray-50">
+                    <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      {new Date(dateStr).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </h3>
 
-                  <div className="space-y-3">
-                    {items.map((item) => (
-                      <div key={`${item.type}-${item.id}`} className={`border-l-4 rounded-r-lg p-3 ${
-                        item.status === 'pending'
+                    <div className="space-y-3">
+                      {items.map((item) => (
+                        <div key={`${item.type}-${item.id}`} className={`border-l-4 rounded-r-lg p-3 ${item.status === 'pending'
                           ? 'border-l-yellow-400 bg-yellow-50'
                           : item.status === 'approved'
-                          ? 'border-l-green-400 bg-green-50'
-                          : 'border-l-gray-400 bg-gray-50'
-                      }`}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center mb-1">
-                              {item.type === 'goal' ? (
-                                <Target className="h-4 w-4 mr-2 text-blue-600" />
-                              ) : (
-                                <MessageSquare className="h-4 w-4 mr-2 text-green-600" />
-                              )}
-                              <span className="font-medium text-sm capitalize">{item.type}</span>
-                              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                                item.status === 'approved'
+                            ? 'border-l-green-400 bg-green-50'
+                            : 'border-l-gray-400 bg-gray-50'
+                          }`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center mb-1">
+                                {item.type === 'goal' ? (
+                                  <Target className="h-4 w-4 mr-2 text-blue-600" />
+                                ) : (
+                                  <MessageSquare className="h-4 w-4 mr-2 text-green-600" />
+                                )}
+                                <span className="font-medium text-sm capitalize">{item.type}</span>
+                                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${item.status === 'approved'
                                   ? 'bg-green-100 text-green-800'
                                   : item.status === 'pending'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {item.status}
-                              </span>
-                            </div>
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {item.status}
+                                </span>
+                              </div>
 
-                            {item.type === 'goal' ? (
-                              <p className="text-sm text-gray-700 mb-1">
-                                {item.data.goal_text}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-gray-700 mb-1">
-                                <strong>What worked well:</strong> {item.data.reflection_answers?.workedWell}
-                              </p>
-                            )}
+                              {item.type === 'goal' ? (
+                                <p className="text-sm text-gray-700 mb-1">
+                                  {item.data.goal_text}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-700 mb-1">
+                                  <strong>What worked well:</strong> {item.data.reflection_answers?.workedWell}
+                                </p>
+                              )}
 
-                            <div className="flex items-center text-xs text-gray-500">
-                              {item.type === 'goal' && item.data.target_percentage && (
-                                <span className="mr-3">Target: {item.data.target_percentage}%</span>
-                              )}
-                              {item.type === 'reflection' && item.data.achieved_percentage && (
-                                <span>Achieved: {item.data.achieved_percentage}%</span>
-                              )}
+                              <div className="flex items-center text-xs text-gray-500">
+                                {item.type === 'goal' && item.data.target_percentage && (
+                                  <span className="mr-3">Target: {item.data.target_percentage}%</span>
+                                )}
+                                {item.type === 'reflection' && item.data.achieved_percentage && (
+                                  <span>Achieved: {item.data.achieved_percentage}%</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+
+              {myGoals.length === 0 && myReflections.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <Target className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-medium mb-2">No Goals or Reflections Yet</h3>
+                  <p className="mb-4">Start your learning journey by setting your first goal and writing reflections.</p>
+                  <div className="flex justify-center space-x-3">
+                    <button
+                      onClick={() => navigate('/goals')}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Set Your First Goal
+                    </button>
+                    <button
+                      onClick={() => navigate('/reflection')}
+                      className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                    >
+                      Write First Reflection
+                    </button>
                   </div>
                 </div>
-              ));
-            })()}
+              )}
+            </div>
+          </div>
+        )}
 
-            {myGoals.length === 0 && myReflections.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <Target className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium mb-2">No Goals or Reflections Yet</h3>
-                <p className="mb-4">Start your learning journey by setting your first goal and writing reflections.</p>
-                <div className="flex justify-center space-x-3">
-                  <button
-                    onClick={() => navigate('/goals')}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                  >
-                    Set Your First Goal
-                  </button>
-                  <button
-                    onClick={() => navigate('/reflection')}
-                    className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-                  >
-                    Write First Reflection
-                  </button>
-                </div>
+        {currentView === VIEW_TYPES.MY_MENTEES && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">My Mentees Overview</h2>
+            {menteeOverviews.length === 0 ? (
+              <p className="text-gray-500">No mentees assigned yet</p>
+            ) : (
+              <div className="flex flex-col lg:flex-row gap-4 overflow-x-auto">
+                {menteeOverviews.map((overview) => (
+                  <div key={overview.student.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow min-w-0 flex-1 lg:flex-none lg:w-80">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 truncate">{overview.student.name}</h3>
+                      <div className="flex items-center space-x-2 mt-1">
+                        {(overview.pending_goals + overview.pending_reflections) > 0 && (
+                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                            {overview.pending_goals + overview.pending_reflections}
+                          </span>
+                        )}
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${overview.weekly_review_status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : overview.weekly_review_status === 'overdue'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                          {overview.weekly_review_status === 'completed' ? '✓ Reviewed' :
+                            overview.weekly_review_status === 'overdue' ? '⚠ Overdue' : '⏰ Pending'}
+                        </span>
+                      </div>
+
+                      {/* Review Score Display */}
+                      {overview.weekly_review_status === 'completed' && overview.latest_review && (
+                        <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-green-800">Latest Score</span>
+                            <span className="text-sm font-bold text-green-900">
+                              {(() => {
+                                // Use centralized function for consistency
+                                const avg = calculateReviewScore(overview.latest_review);
+                                return `${avg.toFixed(1)}/2`;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="flex space-x-1 mt-1">
+                            {(() => {
+                              // Build criteria array dynamically based on review type
+                              const criteria: number[] = [
+                                overview.latest_review.morning_exercise,
+                                overview.latest_review.communication,
+                                overview.latest_review.academic_effort,
+                                overview.latest_review.campus_contribution,
+                                overview.latest_review.behavioural
+                              ];
+
+                              // Add mentorship_level if it exists (MentorReview only - when students review mentors)
+                              if ('mentorship_level' in overview.latest_review) {
+                                criteria.push((overview.latest_review as any).mentorship_level);
+                              }
+
+                              return criteria.map((score, idx) => (
+                                <div key={idx} className="flex-1">
+                                  <div className="w-full bg-green-200 rounded-full h-1">
+                                    <div
+                                      className={`h-1 rounded-full ${score >= 1 ? 'bg-green-500' :
+                                        score >= 0 ? 'bg-yellow-500' : 'bg-red-500'
+                                        }`}
+                                      style={{ width: `${((score + 2) / 4) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 text-sm mb-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Goals:</span>
+                        <span>{overview.pending_goals} pending</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Reflections:</span>
+                        <span>{overview.pending_reflections} pending</span>
+                      </div>
+                      {overview.average_achievement > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Avg Achievement:</span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getAchievementColor(overview.average_achievement)}`}>
+                            {overview.average_achievement}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                      >
+                        View Details
+                        <ArrowRight className="h-4 w-4 ml-1" />
+                      </button>
+                      <button
+                        onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
+                        className={`px-3 py-2 text-sm rounded transition-colors ${overview.weekly_review_status === 'completed'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                          }`}
+                        title={overview.weekly_review_status === 'completed' ? 'View & Update Review' : 'View & Add Review'}
+                      >
+                        <Star className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {currentView === VIEW_TYPES.MY_MENTEES && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">My Mentees Overview</h2>
-          {menteeOverviews.length === 0 ? (
-            <p className="text-gray-500">No mentees assigned yet</p>
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-4 overflow-x-auto">
-              {menteeOverviews.map((overview) => (
-                <div key={overview.student.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow min-w-0 flex-1 lg:flex-none lg:w-80">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 truncate">{overview.student.name}</h3>
-                    <div className="flex items-center space-x-2 mt-1">
-                      {(overview.pending_goals + overview.pending_reflections) > 0 && (
-                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                          {overview.pending_goals + overview.pending_reflections}
-                        </span>
-                      )}
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        overview.weekly_review_status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : overview.weekly_review_status === 'overdue'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {overview.weekly_review_status === 'completed' ? '✓ Reviewed' :
-                         overview.weekly_review_status === 'overdue' ? '⚠ Overdue' : '⏰ Pending'}
-                      </span>
-                    </div>
-
-                    {/* Review Score Display */}
-                    {overview.weekly_review_status === 'completed' && overview.latest_review && (
-                      <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-green-800">Latest Score</span>
-                          <span className="text-sm font-bold text-green-900">
-                            {(() => {
-                              // Use centralized function for consistency
-                              const avg = calculateReviewScore(overview.latest_review);
-                              return `${avg.toFixed(1)}/2`;
-                            })()}
-                          </span>
-                        </div>
-                        <div className="flex space-x-1 mt-1">
-                          {(() => {
-                            // Build criteria array dynamically based on review type
-                            const criteria: number[] = [
-                              overview.latest_review.morning_exercise,
-                              overview.latest_review.communication,
-                              overview.latest_review.academic_effort,
-                              overview.latest_review.campus_contribution,
-                              overview.latest_review.behavioural
-                            ];
-                            
-                            // Add mentorship_level if it exists (MentorReview only - when students review mentors)
-                            if ('mentorship_level' in overview.latest_review) {
-                              criteria.push((overview.latest_review as any).mentorship_level);
-                            }
-                            
-                            return criteria.map((score, idx) => (
-                              <div key={idx} className="flex-1">
-                                <div className="w-full bg-green-200 rounded-full h-1">
-                                  <div
-                                    className={`h-1 rounded-full ${
-                                      score >= 1 ? 'bg-green-500' :
-                                      score >= 0 ? 'bg-yellow-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${((score + 2) / 4) * 100}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 text-sm mb-3">
+        {currentView === VIEW_TYPES.MY_MENTOR && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">My Mentor</h2>
+            {mentorData ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-3">{mentorData.name}</h3>
+                  <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Goals:</span>
-                      <span>{overview.pending_goals} pending</span>
+                      <span>{stats.mentorGoals.total} total</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Reflections:</span>
-                      <span>{overview.pending_reflections} pending</span>
+                      <span>{stats.mentorReflections.total} total</span>
                     </div>
-                    {overview.average_achievement > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Avg Achievement:</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getAchievementColor(overview.average_achievement)}`}>
-                          {overview.average_achievement}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
-                      className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                    >
-                      View Details
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/mentor/mentee/${overview.student.id}`)}
-                      className={`px-3 py-2 text-sm rounded transition-colors ${
-                        overview.weekly_review_status === 'completed'
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-purple-600 text-white hover:bg-purple-700'
-                      }`}
-                      title={overview.weekly_review_status === 'completed' ? 'View & Update Review' : 'View & Add Review'}
-                    >
-                      <Star className="h-4 w-4" />
-                    </button>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Pending Reviews:</span>
+                      <span>{stats.mentorGoals.pending + stats.mentorReflections.pending}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {currentView === VIEW_TYPES.MY_MENTOR && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">My Mentor</h2>
-          {mentorData ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-medium mb-3">{mentorData.name}</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Goals:</span>
-                    <span>{stats.mentorGoals.total} total</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Reflections:</span>
-                    <span>{stats.mentorReflections.total} total</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Pending Reviews:</span>
-                    <span>{stats.mentorGoals.pending + stats.mentorReflections.pending}</span>
-                  </div>
+                <div className="flex items-center justify-center">
+                  <button
+                    onClick={() => navigate(`/mentor/mentee/${mentorData.id}`)}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    View Mentor Details
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <button
-                  onClick={() => navigate(`/mentor/mentee/${mentorData.id}`)}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  View Mentor Details
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500">No mentor assigned yet</p>
-          )}
-        </div>
-      )}
-
-      {currentView === VIEW_TYPES.CAMPUS_OVERVIEW && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Campus Overview</h2>
-          <MentorCampusTab campusId={userData?.campus || 'dharamshala'} />
-        </div>
-      )}
-    </div>
-
-    {/* Campus Joining Date Modal */}
-    {userData && (
-      <CampusJoiningDateModal
-        isOpen={showJoiningDateModal}
-        onClose={() => setShowJoiningDateModal(false)}
-        user={userData}
-        onDateUpdated={handleJoiningDateUpdated}
-      />
-    )}
-
-    {/* Review Reminder Modal */}
-    {showReviewReminder && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-          <div className="flex items-center mb-4">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 ml-3">Weekly Review Reminder</h3>
+            ) : (
+              <p className="text-gray-500">No mentor assigned yet</p>
+            )}
           </div>
-          
-          <p className="text-gray-600 mb-6">
-            You have <span className="font-semibold text-yellow-600">{pendingReviewCount}</span> mentee{pendingReviewCount > 1 ? 's' : ''} 
-            who need{pendingReviewCount === 1 ? 's' : ''} their weekly performance review. 
-            Reviews are due every Saturday.
-          </p>
-          
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowReviewReminder(false)}
-              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-            >
-              Remind Me Later
-            </button>
-            <button
-              onClick={() => {
-                setShowReviewReminder(false);
-                setCurrentView(VIEW_TYPES.MY_MENTEES);
-              }}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              Review Now
-            </button>
+        )}
+
+        {currentView === VIEW_TYPES.CAMPUS_OVERVIEW && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Campus Overview</h2>
+            <MentorCampusTab campusId={userData?.campus || 'dharamshala'} />
           </div>
-        </div>
+        )}
       </div>
-    )}
+
+      {/* Campus Joining Date Modal */}
+      {userData && (
+        <CampusJoiningDateModal
+          isOpen={showJoiningDateModal}
+          onClose={() => setShowJoiningDateModal(false)}
+          user={userData}
+          onDateUpdated={handleJoiningDateUpdated}
+        />
+      )}
+
+      {/* Review Reminder Modal */}
+      {showReviewReminder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-yellow-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 ml-3">Weekly Review Reminder</h3>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              You have <span className="font-semibold text-yellow-600">{pendingReviewCount}</span> mentee{pendingReviewCount > 1 ? 's' : ''}
+              who need{pendingReviewCount === 1 ? 's' : ''} their weekly performance review.
+              Reviews are due every Saturday.
+            </p>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowReviewReminder(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Remind Me Later
+              </button>
+              <button
+                onClick={() => {
+                  setShowReviewReminder(false);
+                  setCurrentView(VIEW_TYPES.MY_MENTEES);
+                }}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Review Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

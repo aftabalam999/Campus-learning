@@ -9,16 +9,7 @@ const WebhookNotificationBell: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  useEffect(() => {
-    loadUnreadCount();
-    
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
-    
-    return () => clearInterval(interval);
-  }, [userData]);
-
-  const loadUnreadCount = async () => {
+  const loadUnreadCount = React.useCallback(async () => {
     if (!userData?.id) return;
 
     try {
@@ -36,7 +27,16 @@ const WebhookNotificationBell: React.FC = () => {
     } catch (err) {
       console.error('Error loading unread count:', err);
     }
-  };
+  }, [userData]);
+
+  useEffect(() => {
+    loadUnreadCount();
+
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(loadUnreadCount, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadUnreadCount]);
 
   const handleBellClick = () => {
     setIsPanelOpen(true);

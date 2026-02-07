@@ -71,7 +71,7 @@ export interface DiscordWebhookPayload {
 // ==================== CONFIGURATION ====================
 
 const DISCORD_WEBHOOK_URL = process.env.REACT_APP_DISCORD_WEBHOOK_URL;
-const MAX_REMINDERS_PER_DAY = 1; // Prevent spam
+
 
 // Color codes for Discord embeds
 const DISCORD_COLORS = {

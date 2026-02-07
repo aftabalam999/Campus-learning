@@ -122,9 +122,13 @@ export class PhaseApprovalService {
 
       // Find all phases that should be marked as completed
       // (current phase and any phases between current and next)
+      // Find all phases that should be marked as completed
+      // (current phase and any phases between current and next)
       const phasesToComplete = allPhases.filter((phase: Phase) => {
         // Only consider ordered phases (not special phases with order >= 9)
         if (phase.order >= 9) return false;
+        // Include phase if it is between current and next
+        return phase.order >= currentPhase.order && phase.order < nextPhase.order;
       });
 
       // Update all skipped/completed phases

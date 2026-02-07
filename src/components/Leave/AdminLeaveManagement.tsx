@@ -17,11 +17,7 @@ const AdminLeaveManagement: React.FC<AdminLeaveManagementProps> = ({ adminId, ad
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    loadLeaves();
-  }, []);
-
-  const loadLeaves = async () => {
+  const loadLeaves = React.useCallback(async () => {
     setLoading(true);
     try {
       const allLeaves = await LeaveManagementService.getAllLeaves();
@@ -31,7 +27,11 @@ const AdminLeaveManagement: React.FC<AdminLeaveManagementProps> = ({ adminId, ad
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadLeaves();
+  }, [loadLeaves]);
 
   const handleApprove = async (leave: Leave) => {
     if (!window.confirm(`Approve leave request for ${leave.user_name}?`)) {
@@ -110,9 +110,8 @@ const AdminLeaveManagement: React.FC<AdminLeaveManagementProps> = ({ adminId, ad
   const getLeaveTypeBadge = (type: string) => {
     const isKitchen = type === 'kitchen_leave';
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-        isKitchen ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
-      }`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${isKitchen ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+        }`}>
         {getLeaveTypeLabel(type)}
       </span>
     );
@@ -129,11 +128,11 @@ const AdminLeaveManagement: React.FC<AdminLeaveManagementProps> = ({ adminId, ad
   const formatDateRange = (start: Date, end: Date) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     if (startDate.toDateString() === endDate.toDateString()) {
       return formatDate(startDate);
     }
-    
+
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
@@ -184,11 +183,10 @@ const AdminLeaveManagement: React.FC<AdminLeaveManagementProps> = ({ adminId, ad
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filter === tab
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === tab
                     ? 'bg-blue-600 text-white'
                     : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 <span className={`ml-2 ${filter === tab ? 'text-blue-200' : 'text-gray-400'}`}>

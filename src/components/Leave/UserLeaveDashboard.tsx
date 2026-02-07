@@ -16,11 +16,7 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
   const [pendingLeaves, setPendingLeaves] = useState<Leave[]>([]);
   const [upcomingLeaves, setUpcomingLeaves] = useState<Leave[]>([]);
 
-  useEffect(() => {
-    loadLeaves();
-  }, [userId]);
-
-  const loadLeaves = async () => {
+  const loadLeaves = React.useCallback(async () => {
     setLoading(true);
     try {
       const userLeaves = await LeaveManagementService.getUserLeaves(userId);
@@ -29,15 +25,15 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
       // Find active leave (where today is between start and end date)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const active = userLeaves.find(leave => {
         if (leave.status !== 'approved') return false;
-        
+
         const startDate = new Date(leave.start_date);
         const endDate = new Date(leave.end_date);
         startDate.setHours(0, 0, 0, 0);
         endDate.setHours(23, 59, 59, 999);
-        
+
         return today >= startDate && today <= endDate;
       });
       setActiveLeave(active || null);
@@ -49,10 +45,10 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
       // Find upcoming leaves (approved but not started yet)
       const upcoming = userLeaves.filter(leave => {
         if (leave.status !== 'approved') return false;
-        
+
         const startDate = new Date(leave.start_date);
         startDate.setHours(0, 0, 0, 0);
-        
+
         return startDate > today;
       });
       setUpcomingLeaves(upcoming);
@@ -61,7 +57,11 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadLeaves();
+  }, [loadLeaves]);
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -101,11 +101,11 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
   const formatDateRange = (start: Date, end: Date) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
+
     if (startDate.toDateString() === endDate.toDateString()) {
       return formatDate(startDate);
     }
-    
+
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
@@ -151,7 +151,7 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
             </div>
             {getStatusBadge(activeLeave.status)}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
               <Calendar className="text-blue-600 mt-1" size={20} />
@@ -161,7 +161,7 @@ const UserLeaveDashboard: React.FC<UserLeaveDashboardProps> = ({ userId }) => {
                 <div className="text-xs text-gray-500 mt-1">{getDuration(activeLeave.start_date, activeLeave.end_date)}</div>
               </div>
             </div>
-            
+
             {activeLeave.reason && (
               <div className="flex items-start gap-3">
                 <AlertCircle className="text-blue-600 mt-1" size={20} />

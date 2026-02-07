@@ -14,27 +14,21 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadNotifications();
-    }
-  }, [isOpen]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = React.useCallback(async () => {
     if (!userData?.id) return;
-    
+
     try {
       setLoading(true);
-      
+
       let allNotifications: GenericNotification[];
-      
+
       // Load admin or user notifications based on role
       if (userData.role === 'admin' || userData.role === 'academic_associate') {
         allNotifications = await GenericNotificationService.getAllAdminNotifications(50);
       } else {
         allNotifications = await GenericNotificationService.getUserNotifications(userData.id, 50);
       }
-      
+
       setNotifications(allNotifications);
     } catch (err) {
       console.error('Error loading notifications:', err);
@@ -42,7 +36,13 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
     } finally {
       setLoading(false);
     }
-  };
+  }, [userData]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen, loadNotifications]);
 
   const handleMarkAsRead = async (notificationId: string, notificationType: GenericNotification['type']) => {
     if (!userData?.id) return;
@@ -103,7 +103,7 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
 
   const getNotificationColor = (type: GenericNotification['type'], isRead: boolean) => {
     if (isRead) return 'text-gray-400';
-    
+
     switch (type) {
       case 'webhook_change':
         return 'text-purple-600';
@@ -184,7 +184,7 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
               <X className="h-5 w-5" />
             </button>
           </div>
-          
+
           {getUnreadCount() > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-primary-100">
@@ -224,25 +224,23 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
             <div className="divide-y divide-gray-200">
               {notifications.map(notification => {
                 const isRead = isNotificationRead(notification);
-                
+
                 return (
                   <div
                     key={notification.id}
-                    className={`p-4 transition-colors ${
-                      isRead ? 'bg-white' : 'bg-blue-50'
-                    }`}
+                    className={`p-4 transition-colors ${isRead ? 'bg-white' : 'bg-blue-50'
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`flex-shrink-0 mt-0.5 ${getNotificationColor(notification.type, isRead)}`}>
                         {getNotificationIcon(notification.type)}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex-1">
-                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${
-                              getNotificationBadgeColor(notification.type)
-                            }`}>
+                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${getNotificationBadgeColor(notification.type)
+                              }`}>
                               {getNotificationTypeLabel(notification.type)}
                             </span>
                           </div>
@@ -257,15 +255,13 @@ const WebhookNotificationPanel: React.FC<WebhookNotificationPanelProps> = ({ isO
                           )}
                         </div>
 
-                        <p className={`text-sm mb-2 ${
-                          isRead ? 'text-gray-600' : 'text-gray-900 font-medium'
-                        }`}>
+                        <p className={`text-sm mb-2 ${isRead ? 'text-gray-600' : 'text-gray-900 font-medium'
+                          }`}>
                           {notification.title}
                         </p>
 
-                        <p className={`text-sm mb-2 ${
-                          isRead ? 'text-gray-500' : 'text-gray-700'
-                        }`}>
+                        <p className={`text-sm mb-2 ${isRead ? 'text-gray-500' : 'text-gray-700'
+                          }`}>
                           {notification.message}
                         </p>
 
