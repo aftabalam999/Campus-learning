@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { AdminService, PhaseService, MentorshipService } from '../../services/dataServices';
-import { 
-  Users, 
-  UserCheck, 
-  ArrowRight, 
+import {
+  Users,
+  UserCheck,
+  ArrowRight,
   Search,
   AlertCircle,
   CheckCircle,
   Award,
   TrendingUp,
   Bell,
-  X,
-  Clock
+  X
 } from 'lucide-react';
 import MentorRequestApproval from './MentorRequestApproval';
 
@@ -48,7 +47,7 @@ const MentorAssignment: React.FC = () => {
   const [selectedHouse, setSelectedHouse] = useState<string | null>(null);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-  
+
   const houses = ['Bageshree', 'Malhar', 'Bhairav'];
 
   useEffect(() => {
@@ -68,14 +67,14 @@ const MentorAssignment: React.FC = () => {
     }
   };
 
-const loadStudents = async () => {
+  const loadStudents = async () => {
     try {
       setLoading(true);
       const allUsers = await AdminService.getAllUsers();
       const phases = await PhaseService.getAllPhases();
-      
+
       console.log('📊 Total users loaded:', allUsers.length);
-      
+
       // Get students (non-admin users) with their current phase
       // Filter based on role field primarily, fallback to isAdmin for backward compatibility
       const studentsData = await Promise.all(
@@ -84,23 +83,23 @@ const loadStudents = async () => {
             // Explicit role check (preferred method)
             const role = u.role || 'student'; // Default to student if no role
             const isStudent = role === 'student' || role === 'mentee';
-            
+
             // Backward compatibility: also check isAdmin field
             const notAdmin = !u.isAdmin;
-            
+
             // Include if either condition is true
             const shouldInclude = isStudent || (notAdmin && !['admin', 'academic_associate'].includes(role));
-            
+
             if (!shouldInclude) {
               console.log(`⊘ Filtering out user: ${u.name} (role: ${role}, isAdmin: ${u.isAdmin})`);
             }
-            
+
             return shouldInclude;
           })
           .map(async (user) => {
             const phaseId = await AdminService.getStudentCurrentPhase(user.id);
             const phase = phaseId ? phases.find(p => p.id === phaseId) : null;
-            
+
             return {
               id: user.id,
               name: user.name,
@@ -117,7 +116,7 @@ const loadStudents = async () => {
         withMentor: studentsData.filter(s => s.mentor_id).length,
         withoutMentor: studentsData.filter(s => !s.mentor_id).length
       });
-      
+
       setStudents(studentsData);
     } catch (error) {
       console.error('❌ Error loading students:', error);
@@ -129,7 +128,7 @@ const loadStudents = async () => {
   const handleSelectStudent = async (student: StudentWithMentor) => {
     setSelectedStudent(student);
     setLoadingMentors(true);
-    
+
     try {
       const suggested = await AdminService.getSuggestedMentors(student.id);
       setSuggestedMentors(suggested);
@@ -146,14 +145,14 @@ const loadStudents = async () => {
     try {
       setAssigning(true);
       await AdminService.assignMentor(selectedStudent.id, mentorId);
-      
+
       // Update local state
-      setStudents(students.map(s => 
+      setStudents(students.map(s =>
         s.id === selectedStudent.id ? { ...s, mentor_id: mentorId } : s
       ));
-      
+
       setSelectedStudent({ ...selectedStudent, mentor_id: mentorId });
-      
+
       alert('Mentor assigned successfully!');
     } catch (error) {
       console.error('Error assigning mentor:', error);
@@ -238,7 +237,7 @@ const loadStudents = async () => {
         </div>
 
         {/* Mentor Requests Card */}
-        <div 
+        <div
           className="bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => setShowRequestsModal(true)}
         >
@@ -279,7 +278,7 @@ const loadStudents = async () => {
         </div>
       )}
 
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Students List */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b border-gray-200">
@@ -303,7 +302,7 @@ const loadStudents = async () => {
                 <span>Refresh</span>
               </button>
             </div>
-            
+
             {/* Search and Filters */}
             <div className="space-y-3">
               <div className="relative">
@@ -320,31 +319,28 @@ const loadStudents = async () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setFilterType('all')}
-                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filterType === 'all'
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'all'
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   All
                 </button>
                 <button
                   onClick={() => setFilterType('without_mentor')}
-                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filterType === 'without_mentor'
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'without_mentor'
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   No Mentor
                 </button>
                 <button
                   onClick={() => setFilterType('with_mentor')}
-                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filterType === 'with_mentor'
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'with_mentor'
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   Has Mentor
                 </button>
@@ -362,11 +358,10 @@ const loadStudents = async () => {
                 <div
                   key={student.id}
                   onClick={() => handleSelectStudent(student)}
-                  className={`p-4 cursor-pointer transition-colors ${
-                    selectedStudent?.id === student.id
+                  className={`p-4 cursor-pointer transition-colors ${selectedStudent?.id === student.id
                       ? 'bg-primary-50 border-l-4 border-primary-600'
                       : 'hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -417,11 +412,10 @@ const loadStudents = async () => {
                   <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => setSelectedHouse(null)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        selectedHouse === null
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedHouse === null
                           ? 'bg-primary-100 text-primary-700'
                           : 'text-gray-600 hover:bg-gray-100'
-                      }`}
+                        }`}
                     >
                       All Houses
                     </button>
@@ -429,11 +423,10 @@ const loadStudents = async () => {
                       <button
                         key={house}
                         onClick={() => setSelectedHouse(house)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          selectedHouse === house
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedHouse === house
                             ? 'bg-primary-100 text-primary-700'
                             : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                          }`}
                       >
                         {house}
                       </button>
@@ -458,7 +451,7 @@ const loadStudents = async () => {
               <div className="p-8 text-center text-gray-500">
                 <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p>
-                  {mentorSearchTerm 
+                  {mentorSearchTerm
                     ? 'No mentors found matching your search'
                     : 'No mentors available for this student'
                   }
@@ -493,11 +486,10 @@ const loadStudents = async () => {
                     <button
                       onClick={() => handleAssignMentor(mentor.id)}
                       disabled={assigning || selectedStudent.mentor_id === mentor.id}
-                      className={`ml-4 px-4 py-2 rounded-lg font-medium transition-colors flex-shrink-0 ${
-                        selectedStudent.mentor_id === mentor.id
+                      className={`ml-4 px-4 py-2 rounded-lg font-medium transition-colors flex-shrink-0 ${selectedStudent.mentor_id === mentor.id
                           ? 'bg-green-100 text-green-700 cursor-default'
                           : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       {assigning ? (
                         <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current"></span>

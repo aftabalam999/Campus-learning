@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  CheckCircle,
   Clock,
   Send,
   User
@@ -49,7 +49,7 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'name' | 'overdue' | 'completion'>('overdue');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedMentors, setSelectedMentors] = useState<Set<string>>(new Set());
+
 
   const loadMentorData = async () => {
     setLoading(true);
@@ -84,7 +84,7 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
             collection(db, 'users'),
             where('__name__', '==', menteeId)
           ));
-          
+
           const menteeName = menteeDoc.docs[0]?.data()?.name || 'Unknown';
 
           // Check if mentor reviewed this mentee this week
@@ -154,13 +154,13 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
   }, [filters]);
 
   const sortMentors = (
-    data: MentorData[], 
+    data: MentorData[],
     by: 'name' | 'overdue' | 'completion',
     order: 'asc' | 'desc'
   ): MentorData[] => {
     const sorted = [...data].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (by) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -273,7 +273,7 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
@@ -290,7 +290,7 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 # Mentees
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('completion')}
               >
@@ -304,7 +304,7 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Pending
               </th>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('overdue')}
               >
@@ -399,11 +399,10 @@ const MentorComplianceTable: React.FC<Props> = ({ filters, onSelectionChange }) 
                           {mentor.menteeDetails.map((mentee) => (
                             <div
                               key={mentee.id}
-                              className={`p-3 rounded-lg border ${
-                                mentee.reviewed
+                              className={`p-3 rounded-lg border ${mentee.reviewed
                                   ? 'bg-green-50 border-green-200'
                                   : 'bg-red-50 border-red-200'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center">

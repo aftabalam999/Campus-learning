@@ -125,10 +125,6 @@ export class PhaseApprovalService {
       const phasesToComplete = allPhases.filter((phase: Phase) => {
         // Only consider ordered phases (not special phases with order >= 9)
         if (phase.order >= 9) return false;
-
-        // Include phases from current up to (but not including) next phase
-        // This ensures student is marked as completed for current phase and any skipped phases
-        return phase.order >= currentPhase.order && phase.order < nextPhase.order;
       });
 
       // Update all skipped/completed phases

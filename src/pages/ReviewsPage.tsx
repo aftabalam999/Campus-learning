@@ -8,20 +8,14 @@ import { User, MentorReview, MenteeReview } from '../types';
 import { calculateReviewScore } from '../utils/reviewCalculations';
 import { getCurrentWeekStart } from '../utils/reviewDateUtils';
 
-interface PersonToReview {
-  id: string;
-  name: string;
-  email: string;
-  latestScore: number | null;
-  hasReviewedThisWeek: boolean;
-}
+
 
 const ReviewsPage: React.FC = () => {
   const { userData } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'mentor' | 'mentees'>('mentor');
   const [loading, setLoading] = useState(true);
-  
+
   // Data
   const [mentorData, setMentorData] = useState<User | null>(null);
   const [myMentees, setMyMentees] = useState<User[]>([]);
@@ -30,19 +24,19 @@ const ReviewsPage: React.FC = () => {
 
   useEffect(() => {
     loadReviewData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
   const loadReviewData = async () => {
     if (!userData) return;
-    
+
     setLoading(true);
     try {
       // Load mentor
       if (userData.mentor_id) {
         const mentor = await UserService.getUserById(userData.mentor_id);
         setMentorData(mentor);
-        
+
         // Load mentor reviews
         const reviews = await MentorReviewService.getReviewsByMentor(userData.mentor_id);
         setMentorReviews(reviews as MentorReview[]);
@@ -76,11 +70,11 @@ const ReviewsPage: React.FC = () => {
     if (!mentorData || !userData) return false;
     const weekStart = getCurrentWeekStart();
     return mentorReviews.some(review => {
-      const reviewWeekStart = review.week_start instanceof Date 
-        ? review.week_start 
+      const reviewWeekStart = review.week_start instanceof Date
+        ? review.week_start
         : new Date(review.week_start);
-      return reviewWeekStart.getTime() >= weekStart.getTime() && 
-             review.student_id === userData.id;
+      return reviewWeekStart.getTime() >= weekStart.getTime() &&
+        review.student_id === userData.id;
     });
   };
 
@@ -88,8 +82,8 @@ const ReviewsPage: React.FC = () => {
     const review = menteeReviews.get(menteeId);
     if (!review) return false;
     const weekStart = getCurrentWeekStart();
-    const reviewWeekStart = review.week_start instanceof Date 
-      ? review.week_start 
+    const reviewWeekStart = review.week_start instanceof Date
+      ? review.week_start
       : new Date(review.week_start);
     return reviewWeekStart.getTime() >= weekStart.getTime();
   };
@@ -114,9 +108,9 @@ const ReviewsPage: React.FC = () => {
         const dateB = b.week_start instanceof Date ? b.week_start : new Date(b.week_start);
         return dateB.getTime() - dateA.getTime();
       });
-    
+
     if (myReviews.length === 0) return 0;
-    
+
     let streak = 1;
     for (let i = 0; i < myReviews.length - 1; i++) {
       const current = new Date(myReviews[i].week_start);
@@ -137,7 +131,7 @@ const ReviewsPage: React.FC = () => {
         const dateB = b.week_start instanceof Date ? b.week_start : new Date(b.week_start);
         return dateB.getTime() - dateA.getTime();
       });
-    
+
     if (myReviews.length < 2) return 'neutral';
     const latest = calculateReviewScore(myReviews[0]);
     const previous = calculateReviewScore(myReviews[1]);
@@ -195,7 +189,7 @@ const ReviewsPage: React.FC = () => {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div 
+            <div
               onClick={() => setActiveTab('mentor')}
               className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-all hover:scale-105"
             >
@@ -207,7 +201,7 @@ const ReviewsPage: React.FC = () => {
                 <UserCircle className="h-8 w-8 text-purple-200" />
               </div>
             </div>
-            <div 
+            <div
               onClick={() => setActiveTab('mentees')}
               className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-all hover:scale-105"
             >
@@ -224,8 +218,8 @@ const ReviewsPage: React.FC = () => {
                 <div>
                   <p className="text-purple-100 text-sm">This Week</p>
                   <p className="text-2xl font-bold">
-                    {(hasReviewedMentorThisWeek() ? 1 : 0) + 
-                     myMentees.filter(m => hasReviewedMenteeThisWeek(m.id)).length}
+                    {(hasReviewedMentorThisWeek() ? 1 : 0) +
+                      myMentees.filter(m => hasReviewedMenteeThisWeek(m.id)).length}
                     /{(mentorData ? 1 : 0) + myMentees.length}
                   </p>
                 </div>
@@ -258,7 +252,7 @@ const ReviewsPage: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Trend */}
             {getMentorTrend() !== 'neutral' && (
               <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -273,7 +267,7 @@ const ReviewsPage: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Completion Status */}
             <div className="bg-white rounded-lg p-4 shadow-sm">
               <div className="flex items-center space-x-2">
@@ -283,8 +277,8 @@ const ReviewsPage: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600">This Week</p>
                   <p className="text-lg font-bold text-purple-600">
-                    {hasReviewedMentorThisWeek() && myMentees.every(m => hasReviewedMenteeThisWeek(m.id)) 
-                      ? 'All done!' 
+                    {hasReviewedMentorThisWeek() && myMentees.every(m => hasReviewedMenteeThisWeek(m.id))
+                      ? 'All done!'
                       : `${getDaysUntilDeadline()} day${getDaysUntilDeadline() === 1 ? '' : 's'} left`}
                   </p>
                 </div>
@@ -301,7 +295,7 @@ const ReviewsPage: React.FC = () => {
             <TrendingUp className="h-5 w-5 mr-2 text-purple-600" />
             Review Performance Trends
           </h3>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Mentor Reviews Chart */}
             <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4">
@@ -325,10 +319,10 @@ const ReviewsPage: React.FC = () => {
                     <span className="font-bold text-purple-600">
                       {mentorReviews.filter(r => r.student_id === userData?.id).length > 0
                         ? (mentorReviews
-                            .filter(r => r.student_id === userData?.id)
-                            .reduce((sum, r) => sum + calculateReviewScore(r), 0) /
-                           mentorReviews.filter(r => r.student_id === userData?.id).length
-                          ).toFixed(1)
+                          .filter(r => r.student_id === userData?.id)
+                          .reduce((sum, r) => sum + calculateReviewScore(r), 0) /
+                          mentorReviews.filter(r => r.student_id === userData?.id).length
+                        ).toFixed(1)
                         : 'N/A'}
                     </span>
                   </div>
@@ -342,8 +336,8 @@ const ReviewsPage: React.FC = () => {
                         const score = calculateReviewScore(review);
                         const percentage = (score / 2) * 100; // Assuming max score is 2
                         return (
-                          <div 
-                            key={idx} 
+                          <div
+                            key={idx}
                             className="flex items-center space-x-2 group cursor-pointer hover:bg-purple-100 hover:bg-opacity-50 rounded-lg p-1 transition-all"
                             title={`Review from ${formatWeekLabel(review.week_start)} - Score: ${score.toFixed(2)}/2.0`}
                           >
@@ -385,9 +379,9 @@ const ReviewsPage: React.FC = () => {
                     <span className="font-bold text-blue-600">
                       {Array.from(menteeReviews.values()).length > 0
                         ? (Array.from(menteeReviews.values())
-                            .reduce((sum, r) => sum + calculateReviewScore(r), 0) /
-                           Array.from(menteeReviews.values()).length
-                          ).toFixed(1)
+                          .reduce((sum, r) => sum + calculateReviewScore(r), 0) /
+                          Array.from(menteeReviews.values()).length
+                        ).toFixed(1)
                         : 'N/A'}
                     </span>
                   </div>
@@ -398,8 +392,8 @@ const ReviewsPage: React.FC = () => {
                       const score = review ? calculateReviewScore(review) : 0;
                       const percentage = (score / 2) * 100;
                       return (
-                        <div 
-                          key={mentee.id} 
+                        <div
+                          key={mentee.id}
                           className="flex items-center space-x-2 group cursor-pointer hover:bg-blue-100 hover:bg-opacity-50 rounded-lg p-1 transition-all"
                           title={`${mentee.name} - Latest Score: ${review ? score.toFixed(2) : 'Not reviewed yet'}`}
                         >
@@ -439,11 +433,10 @@ const ReviewsPage: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveTab('mentor')}
-              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${
-                activeTab === 'mentor'
+              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${activeTab === 'mentor'
                   ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <UserCircle className="h-5 w-5" />
@@ -455,11 +448,10 @@ const ReviewsPage: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('mentees')}
-              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${
-                activeTab === 'mentees'
+              className={`w-full sm:w-auto text-center px-4 py-3 sm:px-6 sm:py-4 font-medium border-b-2 transition-colors ${activeTab === 'mentees'
                   ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5" />
@@ -479,7 +471,7 @@ const ReviewsPage: React.FC = () => {
           {activeTab === 'mentor' ? (
             // Mentor Tab
             <div>
-{mentorData ? (
+              {mentorData ? (
                 <div className="bg-white rounded-lg shadow-sm border-l-4 border-purple-500 p-2 hover:shadow-md transition-shadow">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-0">
                     <div className="flex items-start sm:items-center space-x-4 min-w-0">
@@ -528,9 +520,9 @@ const ReviewsPage: React.FC = () => {
                             <>
                               {(() => {
                                 const score = getLatestMentorScore()!;
-                                const colorClass = score >= 1.7 ? 'text-green-600 bg-green-100' : 
-                                                  score >= 1.3 ? 'text-yellow-600 bg-yellow-100' : 
-                                                  'text-red-600 bg-red-100';
+                                const colorClass = score >= 1.7 ? 'text-green-600 bg-green-100' :
+                                  score >= 1.3 ? 'text-yellow-600 bg-yellow-100' :
+                                    'text-red-600 bg-red-100';
                                 return (
                                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
                                     ⭐ {score.toFixed(1)}/2.0
@@ -556,7 +548,7 @@ const ReviewsPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-) : (
+              ) : (
                 <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg shadow-sm border-2 border-dashed border-purple-300 p-16 text-center">
                   <div className="mb-6">
                     <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -585,7 +577,7 @@ const ReviewsPage: React.FC = () => {
             <div>
               {myMentees.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-{myMentees.map((mentee) => {
+                  {myMentees.map((mentee) => {
                     const hasReviewed = hasReviewedMenteeThisWeek(mentee.id);
                     const latestReview = menteeReviews.get(mentee.id);
                     const latestScore = latestReview ? calculateReviewScore(latestReview) : null;
@@ -640,9 +632,9 @@ const ReviewsPage: React.FC = () => {
                             {latestScore !== null && (
                               <>
                                 {(() => {
-                                  const colorClass = latestScore >= 1.7 ? 'text-green-600 bg-green-100' : 
-                                                    latestScore >= 1.3 ? 'text-yellow-600 bg-yellow-100' : 
-                                                    'text-red-600 bg-red-100';
+                                  const colorClass = latestScore >= 1.7 ? 'text-green-600 bg-green-100' :
+                                    latestScore >= 1.3 ? 'text-yellow-600 bg-yellow-100' :
+                                      'text-red-600 bg-red-100';
                                   return (
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
                                       ⭐ {latestScore.toFixed(1)}/2.0
@@ -664,7 +656,7 @@ const ReviewsPage: React.FC = () => {
                     );
                   })}
                 </div>
-) : (
+              ) : (
                 <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg shadow-sm border-2 border-dashed border-indigo-300 p-16 text-center">
                   <div className="mb-6">
                     <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { AdminService } from '../../services/dataServices';
-import { 
-  Users, 
+import {
+  Users,
   Shield,
-  ShieldOff, 
-  Mail, 
-  Calendar,
-  Search,
+  ShieldOff,
   UserCheck,
-  AlertCircle,
-  Trash2,
   UserX,
   CheckCircle,
-  XCircle,
   Award,
   Clock,
   Crown,
   GraduationCap,
   UserCog,
-  Settings
+  AlertCircle,
+  Search,
+  Mail,
+  Calendar,
+  XCircle,
+  Trash2
 } from 'lucide-react';
 import AttendanceDashboard from './AttendanceDashboard';
 
@@ -57,9 +56,9 @@ const AdminUserManagement: React.FC = () => {
     try {
       setUpdating(userId);
       await AdminService.updateUserAdminStatus(userId, !currentStatus);
-      
+
       // Update local state
-      setUsers(users.map(user => 
+      setUsers(users.map(user =>
         user.id === userId ? { ...user, isAdmin: !currentStatus } : user
       ));
     } catch (error) {
@@ -74,12 +73,12 @@ const AdminUserManagement: React.FC = () => {
     try {
       setUpdating(userId);
       await AdminService.deleteUser(userId);
-      
+
       // Update local state
-      setUsers(users.map(user => 
+      setUsers(users.map(user =>
         user.id === userId ? { ...user, status: 'inactive' } : user
       ));
-      
+
       setShowDeleteModal(null);
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -93,7 +92,7 @@ const AdminUserManagement: React.FC = () => {
     try {
       setUpdating(userId);
       await AdminService.updateUserStatus(userId, newStatus);
-      
+
       // Update local state with the new status and unapproved_leave_start if applicable
       setUsers(users.map(user => {
         if (user.id === userId) {
@@ -107,7 +106,7 @@ const AdminUserManagement: React.FC = () => {
         }
         return user;
       }));
-      
+
       setShowStatusModal(null);
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -121,12 +120,12 @@ const AdminUserManagement: React.FC = () => {
     try {
       setUpdating(userId);
       await AdminService.updateUserRole(userId, newRole);
-      
+
       // Update local state
-      setUsers(users.map(user => 
+      setUsers(users.map(user =>
         user.id === userId ? { ...user, role: newRole } : user
       ));
-      
+
       setShowRoleModal(false);
       setSelectedUser(null);
       setSelectedRole('student');
@@ -236,9 +235,9 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
-    const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter(user => {
     // Text search
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -392,75 +391,68 @@ const AdminUserManagement: React.FC = () => {
           </div>
 
           {/* Filter Buttons */}
-                    {/* Filter Buttons */}
+          {/* Filter Buttons */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'all'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'all'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setFilterType('admin')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'admin'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'admin'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Admins
             </button>
             <button
               onClick={() => setFilterType('student')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'student'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'student'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Students
             </button>
             <button
               onClick={() => setFilterType('no_mentor')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'no_mentor'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'no_mentor'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               No Mentor
             </button>
             <button
               onClick={() => setFilterType('inactive')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'inactive'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'inactive'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Inactive
             </button>
             <button
               onClick={() => setFilterType('dropout')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'dropout'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'dropout'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Dropout
             </button>
             <button
               onClick={() => setFilterType('placed')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === 'placed'
-                  ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filterType === 'placed'
+                ? 'bg-primary-100 text-primary-700 border border-primary-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Placed
             </button>
@@ -562,11 +554,10 @@ const AdminUserManagement: React.FC = () => {
                         <button
                           onClick={() => handleToggleAdmin(user.id, user.isAdmin || false)}
                           disabled={updating === user.id}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium transition-colors ${
-                            user.isAdmin
-                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium transition-colors ${user.isAdmin
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            } ${updating === user.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                           title={user.isAdmin ? 'Remove admin privileges' : 'Grant admin privileges'}
                         >
                           {updating === user.id ? (
