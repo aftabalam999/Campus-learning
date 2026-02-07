@@ -6,7 +6,7 @@ import {
     TopicService
 } from './dataServices';
 import { UserService } from './firestore';
-import { User, DailyGoal, DailyReflection } from '../types';
+import { User } from '../types';
 
 // Dummy Data Configuration
 const DUMMY_MENTORS = [

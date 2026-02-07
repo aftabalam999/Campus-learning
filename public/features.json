@@ -1,8 +1,72 @@
 {
-  "generatedAt": "2025-12-19T10:56:19.390Z",
+  "generatedAt": "2026-02-07T05:33:53.032Z",
   "version": "0.1.0",
   "features": {
     "all": [
+      {
+        "id": "feature-f0f745db",
+        "title": "Added leave management logic and user seeding",
+        "description": "Added leave management logic and user seeding",
+        "status": "released",
+        "dateAdded": "2026-02-07",
+        "commitHash": "f0f745db54d4c90ce5abc229831204c52cbe0477",
+        "author": "aftabalam999"
+      },
+      {
+        "id": "feature-9f5556a4",
+        "title": "Add comprehensive leave management system with notifications",
+        "description": "Add comprehensive leave management system with notifications",
+        "status": "released",
+        "dateAdded": "2025-12-31",
+        "commitHash": "9f5556a4a7b3a566d83d6adf1a3bdabf280a99c3",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-c673657b",
+        "title": "Add campus webhook management with database integration",
+        "description": "Add campus webhook management with database integration",
+        "status": "released",
+        "dateAdded": "2025-12-27",
+        "commitHash": "c673657b2e86460c8eb5d2a1a0cf475c8be64b86",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-ae6f35ea",
+        "title": "Add first-time login Discord notification feature",
+        "description": "Add first-time login Discord notification feature",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "ae6f35ea5d07bc27a8f77fa2f28718dc99a9bae9",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-bc776461",
+        "title": "Fix: Replace example webhook URLs with placeholders to avoid secret detection",
+        "description": "Fix: Replace example webhook URLs with placeholders to avoid secret detection",
+        "status": "coming-soon",
+        "dateAdded": "2025-12-20",
+        "commitHash": "bc776461dd7afe88d8a837146a4bd2e5243320e3",
+        "author": "Code-BySachin",
+        "estimatedRelease": "2026-01-03"
+      },
+      {
+        "id": "feature-ccc70966",
+        "title": "Add campus-wise Discord attendance reports with automatic scheduling",
+        "description": "Add campus-wise Discord attendance reports with automatic scheduling",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "ccc709665e91b05c77b439c55c5c65630453a979",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-5dfc19ec",
+        "title": "Add phase transition tracking with active and completed student counts",
+        "description": "Add phase transition tracking with active and completed student counts",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "5dfc19ecebe5442cda1d51943bd01680561758ac",
+        "author": "Code-BySachin"
+      },
       {
         "id": "feature-c1107517",
         "title": "Chore: Add safe .env.example with placeholders only",
@@ -146,57 +210,65 @@
         "status": "released",
         "dateAdded": "2025-10-07",
         "commitHash": "53221fd1038c4952d7d22f58a9654b7d88a0334d",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-3c2397b3",
-        "title": "Complete dashboard overhaul with uniform layouts, date grouping, and pending item prioritization",
-        "description": "Complete dashboard overhaul with uniform layouts, date grouping, and pending item prioritization",
-        "status": "released",
-        "dateAdded": "2025-10-07",
-        "commitHash": "3c2397b3e37bc27dd6b51b359c27d8d759f2c8da",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-5e8706f5",
-        "title": "Implement comprehensive real-time attendance tracking system",
-        "description": "Implement comprehensive real-time attendance tracking system",
-        "status": "released",
-        "dateAdded": "2025-10-05",
-        "commitHash": "5e8706f5e9c6a2fcec2fda205681b6fce832fe4c",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-945d5452",
-        "title": "Complete dynamic feature tracking system and fix compilation errors",
-        "description": "Complete dynamic feature tracking system and fix compilation errors",
-        "status": "released",
-        "dateAdded": "2025-10-05",
-        "commitHash": "945d5452fe98f7adac5d3b7e73a21d98196019be",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-bf9a1502",
-        "title": "Advanced Analytics Dashboard",
-        "description": "Advanced Analytics Dashboard",
-        "status": "coming-soon",
-        "dateAdded": "2025-10-05",
-        "commitHash": "bf9a1502f368dcc7af4ebb971bfbf40498f0473b",
-        "author": "Mubin",
-        "estimatedRelease": "2025-10-19"
-      },
-      {
-        "id": "feature-8f4da32a",
-        "title": "Implement complete mentorship system with Phase 1 & 2",
-        "description": "Implement complete mentorship system with Phase 1 & 2",
-        "status": "released",
-        "dateAdded": "2025-10-04",
-        "commitHash": "8f4da32a02dbe60505f5de6b2d1e537cbe3d94bb",
         "author": "Mubin"
       }
     ],
     "released": [
       {
+        "id": "feature-f0f745db",
+        "title": "Added leave management logic and user seeding",
+        "description": "Added leave management logic and user seeding",
+        "status": "released",
+        "dateAdded": "2026-02-07",
+        "commitHash": "f0f745db54d4c90ce5abc229831204c52cbe0477",
+        "author": "aftabalam999"
+      },
+      {
+        "id": "feature-9f5556a4",
+        "title": "Add comprehensive leave management system with notifications",
+        "description": "Add comprehensive leave management system with notifications",
+        "status": "released",
+        "dateAdded": "2025-12-31",
+        "commitHash": "9f5556a4a7b3a566d83d6adf1a3bdabf280a99c3",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-c673657b",
+        "title": "Add campus webhook management with database integration",
+        "description": "Add campus webhook management with database integration",
+        "status": "released",
+        "dateAdded": "2025-12-27",
+        "commitHash": "c673657b2e86460c8eb5d2a1a0cf475c8be64b86",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-ae6f35ea",
+        "title": "Add first-time login Discord notification feature",
+        "description": "Add first-time login Discord notification feature",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "ae6f35ea5d07bc27a8f77fa2f28718dc99a9bae9",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-ccc70966",
+        "title": "Add campus-wise Discord attendance reports with automatic scheduling",
+        "description": "Add campus-wise Discord attendance reports with automatic scheduling",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "ccc709665e91b05c77b439c55c5c65630453a979",
+        "author": "Code-BySachin"
+      },
+      {
+        "id": "feature-5dfc19ec",
+        "title": "Add phase transition tracking with active and completed student counts",
+        "description": "Add phase transition tracking with active and completed student counts",
+        "status": "released",
+        "dateAdded": "2025-12-20",
+        "commitHash": "5dfc19ecebe5442cda1d51943bd01680561758ac",
+        "author": "Code-BySachin"
+      },
+      {
         "id": "feature-b7536d36",
         "title": "Add student phase breakdown and improve days calculation in journey tracker",
         "description": "Add student phase breakdown and improve days calculation in journey tracker",
@@ -330,45 +402,19 @@
         "dateAdded": "2025-10-07",
         "commitHash": "53221fd1038c4952d7d22f58a9654b7d88a0334d",
         "author": "Mubin"
-      },
-      {
-        "id": "feature-3c2397b3",
-        "title": "Complete dashboard overhaul with uniform layouts, date grouping, and pending item prioritization",
-        "description": "Complete dashboard overhaul with uniform layouts, date grouping, and pending item prioritization",
-        "status": "released",
-        "dateAdded": "2025-10-07",
-        "commitHash": "3c2397b3e37bc27dd6b51b359c27d8d759f2c8da",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-5e8706f5",
-        "title": "Implement comprehensive real-time attendance tracking system",
-        "description": "Implement comprehensive real-time attendance tracking system",
-        "status": "released",
-        "dateAdded": "2025-10-05",
-        "commitHash": "5e8706f5e9c6a2fcec2fda205681b6fce832fe4c",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-945d5452",
-        "title": "Complete dynamic feature tracking system and fix compilation errors",
-        "description": "Complete dynamic feature tracking system and fix compilation errors",
-        "status": "released",
-        "dateAdded": "2025-10-05",
-        "commitHash": "945d5452fe98f7adac5d3b7e73a21d98196019be",
-        "author": "Mubin"
-      },
-      {
-        "id": "feature-8f4da32a",
-        "title": "Implement complete mentorship system with Phase 1 & 2",
-        "description": "Implement complete mentorship system with Phase 1 & 2",
-        "status": "released",
-        "dateAdded": "2025-10-04",
-        "commitHash": "8f4da32a02dbe60505f5de6b2d1e537cbe3d94bb",
-        "author": "Mubin"
       }
     ],
     "comingSoon": [
+      {
+        "id": "feature-bc776461",
+        "title": "Fix: Replace example webhook URLs with placeholders to avoid secret detection",
+        "description": "Fix: Replace example webhook URLs with placeholders to avoid secret detection",
+        "status": "coming-soon",
+        "dateAdded": "2025-12-20",
+        "commitHash": "bc776461dd7afe88d8a837146a4bd2e5243320e3",
+        "author": "Code-BySachin",
+        "estimatedRelease": "2026-01-03"
+      },
       {
         "id": "feature-c1107517",
         "title": "Chore: Add safe .env.example with placeholders only",
@@ -378,16 +424,6 @@
         "commitHash": "c1107517ad2e2a4d5ae73f0c12b6daa1ee353cd4",
         "author": "Code-BySachin",
         "estimatedRelease": "2026-01-02"
-      },
-      {
-        "id": "feature-bf9a1502",
-        "title": "Advanced Analytics Dashboard",
-        "description": "Advanced Analytics Dashboard",
-        "status": "coming-soon",
-        "dateAdded": "2025-10-05",
-        "commitHash": "bf9a1502f368dcc7af4ebb971bfbf40498f0473b",
-        "author": "Mubin",
-        "estimatedRelease": "2025-10-19"
       }
     ],
     "inDevelopment": [],
